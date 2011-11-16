@@ -5,10 +5,16 @@ import play.api.mvc._
 
 import models._
 
+import org.jsoup.Jsoup
+import org.jsoup.nodes._
+import org.jsoup.select.Elements
+
+import collection.JavaConversions._ 
+
 object Application extends Controller {
   
   def index = Action {
-    Ok(views.html.index("Your new application is ready."))
+    Ok(views.html.index("Hello World"))
   }
 
   def testHackerNews = Action {
@@ -22,4 +28,8 @@ object Application extends Controller {
     )
   }
   
+  def url2Image (url: String) = Action {
+    Logger.info("url2image url "+url)
+ }
+
 }
