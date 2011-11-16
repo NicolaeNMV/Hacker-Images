@@ -9,6 +9,7 @@ object ApplicationBuild extends Build {
 
     val appDependencies = Seq(
       // Add your project dependencies here,
+      "org.jsoup" % "jsoup" % "1.6.1"
     )
 
     val main = PlayProject(appName, appVersion, appDependencies).settings(defaultScalaSettings:_*).settings(
