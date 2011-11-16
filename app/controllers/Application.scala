@@ -44,7 +44,18 @@ object Application extends Controller {
   }
   
   def url2Image (url: String) = Action {
-    Logger.info("url2image url "+url)
- }
+    AsyncResult({
+      Logger.info("url2image url "+url)
+      MostRelevantPageImageExtractor.getImageUrl(url).map(list => {
+          list.map( list => {
+            Ok(""+list)
+          }).getOrElse(Ok("Not found"))
+      })
+  })
+  }
+  def urlImageAbsolutizeTest () = Action {
+    MostRelevantPageImageExtractor.urlImageAbsolutizeTest()
+    Ok("Working")
+  }
 
 }
