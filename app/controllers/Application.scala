@@ -14,7 +14,22 @@ import collection.JavaConversions._
 object Application extends Controller {
   
   def index = Action {
-    Ok(views.html.index("Hello World"))
+    val links = HackerNewsRetriever.getLinks()
+    AsyncResult(
+      links.map(links => {
+        Logger.debug(links.length+" links retrieved.");
+        val images = links.flatMap(link => {
+          val imageUrl = MostRelevantPageImageExtractor.getImageUrl(link.url)
+          imageUrl.value /* FIXME this is blocking... */ match {
+            case Redeemed(url) => url.map(
+              url=>link.copy(url=url)
+            )
+          }
+        })
+        Logger.debug(images.length+" images retrieved.");
+        Ok(views.html.index(images))
+      })
+    )
   }
 
   def testHackerNews = Action {
