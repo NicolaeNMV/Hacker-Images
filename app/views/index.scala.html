@@ -1,7 +1,15 @@
 @(images:List[Link])
 
-@main("Welcome to Play 2.0 beta") {
-    
-    @play20.welcome("Hello hackers!")
-    
+@main() {
+<header></header>
+
+<ul id="images">
+  @images.map( image =>
+  <li>
+  	<img src="@image.url" alt="" />
+  </li>
+  )
+</ul>
+
+<footer></footer>
 }
