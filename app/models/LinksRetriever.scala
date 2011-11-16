@@ -14,7 +14,6 @@ trait LinksRetriever {
   def getLinks(): Promise[List[Link]]
 }
 
-
 object HackerNewsRetriever extends LinksRetriever {
   val url = "http://news.ycombinator.com/news";
   def getLinks(): Promise[List[Link]] = {
