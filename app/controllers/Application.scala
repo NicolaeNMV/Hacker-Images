@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes._
 import org.jsoup.select.Elements
 
-import collection.JavaConversions._ 
+import play.api.libs.concurrent._
 
 object Application extends Controller {
   
