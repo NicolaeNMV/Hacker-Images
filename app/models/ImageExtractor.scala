@@ -70,7 +70,7 @@ object MostRelevantPageImageExtractor extends ImageExtractor {
       if (pageUrl.indexOf("/") != -1 && !pageUrl.endsWith("/"))
         pageUrl = pageUrl.substring(0, pageUrl.lastIndexOf("/")-1 )
       pageUrl += "/"
-      pageUrl
+      "http://" + pageUrl
     }
   }
   def urlImageAbsolutize(page: String, image: String) = {
