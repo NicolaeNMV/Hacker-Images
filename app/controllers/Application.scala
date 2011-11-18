@@ -11,22 +11,25 @@ import org.jsoup.select.Elements
 
 import play.api.libs.concurrent._
 
+case class LinkWithImage(url: String, weight: Double, image: String) 
+
 object Application extends Controller {
-  
+
   def index = Action {
     val links = HackerNewsRetriever.getLinks()
     AsyncResult(
       links.map(links => {
         Logger.debug(links.length+" links retrieved.");
         val images = links.flatMap(link => {
-          val imageUrl = MostRelevantPageImageExtractor.getImageUrl(link.url)
-          imageUrl.value /* FIXME this is blocking... */ match {
+          val imageUrl = ScreenshotExtractor.getImageUrl(link.url)
+          imageUrl.value match { // FIXME this is blocking... 
             case Redeemed(url) => url.map(
-              url=>link.copy(url=url)
+              imgurl => LinkWithImage(link.url, link.weight, imgurl)
             )
           }
         })
         Logger.debug(images.length+" images retrieved.");
+        Logger.debug(""+images);
         Ok(views.html.index(images))
       })
     )

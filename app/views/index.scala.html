@@ -1,15 +1,16 @@
-@(images:List[Link])
+@(links:List[LinkWithImage])
 
 @main() {
-<header></header>
+<header>
+  <h1>Hacker Overview</h1>
+</header>
 
-<ul id="images">
-  @images.map( image =>
-  <li>
-  	<img src="@image.url" alt="" />
-  </li>
-  )
-</ul>
+<div id="pages">
+  @for(link <- links) {
+  <a class="page" href="@link.url" target="_blank" data-weight="@link.weight"><img src="@link.image" /></a>
+  }
+</div>
 
 <footer></footer>
 }
+

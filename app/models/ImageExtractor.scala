@@ -14,14 +14,13 @@ trait ImageExtractor {
 
 object ScreenshotExtractor extends ImageExtractor {
   def getImageUrl(pageUrl:String): Promise[Option[String]] = {
-    // Implement me
     Promise.pure(Some( "http://immediatenet.com/t/fs?Size=1024x768&URL="+pageUrl) )
   }
 }
 
 object MostRelevantPageImageExtractor extends ImageExtractor {
   def getImageUrl(url:String): Promise[Option[String]] = {
-    Logger.info("ws get url "+url)
+    Logger.debug("MostRelevantPageImageExtractor.getImageUrl("+url+")")
     WS.url(url).get().map(html => {
       Logger.info("ws inside ")
 

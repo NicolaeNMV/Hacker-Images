@@ -32,3 +32,11 @@ object HackerNewsRetriever extends LinksRetriever {
     })
   }
 }
+
+/*
+// some exception when trying to use this, Mmh, sounds like I found a bug?
+object TestRetriever extends LinksRetriever {
+  val datas = Range(1,7).toList.map(n => Link("http://localhost:9000/public/images/test/0"+n+".png", n) )
+  def getLinks(): Promise[List[Link]] = Promise.pure(datas)
+}
+*/
