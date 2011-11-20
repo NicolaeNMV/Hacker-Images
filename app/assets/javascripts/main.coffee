@@ -18,14 +18,16 @@ class Box
     @
 
 class Engine
-  iframes: []
-  constructor: (@container) -> 
+
+  constructor: (@container, @width=1000) -> 
     @imgs = @container.find('.page').map(-> new Box($(this), @) )
     @
 
   computeWeights: ->
+    maxDim = @width
     for img in @imgs
-      img.setSize(200, 150)
+      dim = maxDim * (img.weight*3)
+      img.setSize(dim, dim)
     @
 
   computeDistribution: -> 
@@ -33,21 +35,25 @@ class Engine
     margin = 10
     x = 0
     y = 0
-    maxW = @container.width()
+    heights = []
+    maxW = @width
     for img in @imgs
-      if( x > maxW - 200)
+      if( x > maxW - img.w)
         x = 0
-        y += 150+margin
+        maxHeight = 0
+        for imgH in heights
+          if(imgH.h > maxHeight)
+            maxHeight = imgH.h
+        y += maxHeight+margin
+        heights = []
+      heights.push(img)
       img.setPosition(x, y)
-      x += 200+margin
+      x += img.w+margin
     @
 
   start: -> 
     @computeWeights()
     @computeDistribution()
-    $(window).resize(=>
-      @computeDistribution()
-    )
     @container.addClass('transitionStarted')
     @
 
