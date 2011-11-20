@@ -8,7 +8,7 @@ import org.jsoup.nodes._
 
 import collection.JavaConversions._
 
-case class Link(url: String, weight: Double)
+case class Link(url: String, weight: Double, title: String)
 
 trait LinksRetriever {
   def getLinks(): Promise[List[Link]]
@@ -20,15 +20,15 @@ object HackerNewsRetriever extends LinksRetriever {
     WS.url(url).get().map(response => {
       Logger.debug(url+" getted.");
       val doc = Jsoup.parse(response.getResponseBody);
-      val nodes = doc.select("td.title a[href^=http]:not([href$=.pdf])")
+      val nodes = doc.select("td.title a[href^=http://]:not([href$=.pdf])")
       val notNormalizedLinks = nodes.map(element => {
         val attr = element.attributes.find(_.getKey=="href").get
         val tr = element.parents().find(_.tag().getName()=="tr").get
         val rank = tr.children().head.text().trim().dropRight(1).toDouble
         val points = tr.nextElementSibling().select("td.subtext span").text().trim().takeWhile(_.isDigit).toDouble
         val weight = (2+nodes.length-rank)*(500.0/nodes.length)+points
-        Link(attr.getValue, weight)
-      }).toList.sortBy(-_.weight)
+        Link(attr.getValue, weight, element.text())
+      }).toList.sortBy(-_.weight).take(10)
       val sum = notNormalizedLinks.map(_.weight).foldLeft(0.0)((a, b)=>a+b)
       notNormalizedLinks.map(element => element.copy(weight = element.weight/sum))
     })

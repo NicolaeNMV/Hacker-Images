@@ -11,7 +11,7 @@ import org.jsoup.select.Elements
 
 import play.api.libs.concurrent._
 
-case class LinkWithImage(url: String, weight: Double, image: String) 
+case class LinkWithImage(url: String, weight: Double, title: String, image: String) 
 
 object Application extends Controller {
 
@@ -24,7 +24,7 @@ object Application extends Controller {
           val imageUrl = ScreenshotExtractor.getImageUrl(link.url)
           imageUrl.value match { // FIXME this is blocking... 
             case Redeemed(url) => url.map(
-              imgurl => LinkWithImage(link.url, link.weight, imgurl)
+              imgurl => LinkWithImage(link.url, link.weight, link.title, imgurl)
             )
           }
         })

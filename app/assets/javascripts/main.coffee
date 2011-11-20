@@ -19,14 +19,14 @@ class Box
 
 class Engine
 
-  constructor: (@container, @width=1000) -> 
+  constructor: (@container, @width=800) -> 
     @imgs = @container.find('.page').map(-> new Box($(this), @) )
     @
 
   computeWeights: ->
     maxDim = @width
     for img in @imgs
-      dim = maxDim * (img.weight*3)
+      dim = maxDim * (img.weight*2.5)
       img.setSize(dim, dim)
     @
 
