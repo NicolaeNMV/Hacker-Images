@@ -1,38 +1,42 @@
 
+window['console'] = {log: $.noop, debug: $.noop, error: $.noop} if !window['console']
 
 class Box
   constructor: (@node, @container) -> 
     @img = @node.find('img')
     @weight = parseFloat(@node.attr('data-weight'))
     @
+  updateWeight: ->
   setPosition: (@x, @y) -> 
-    transform = 'translate('+@x+'px,'+@y+'px)'
-    properties = {}
-    for prefix in ['-moz-', '-webkit-', '-o-']
-      properties[prefix+'transform'] = transform 
-    @node.css(properties)
+    @node.css(top: @y, left: @x)
     @
 
   setSize: (@w, @h) -> 
-    @img.width(@w).height(@h)
+    #@img.width(@w)
+    @node.width(@w).height(@h)
     @
 
 class Engine
 
   constructor: (@container, @width=800) -> 
-    @imgs = @container.find('.page').map(-> new Box($(this), @) )
+    @updatePagesFromDOM()
     @
 
+  updatePagesFromDOM: ->
+    @imgs = @container.find('.page').map(-> new Box($(this), @) )
+
   computeWeights: ->
+    console.debug("computingWeights...")
     maxDim = @width
     for img in @imgs
-      dim = maxDim * (img.weight*2.5)
+      dim = maxDim * (img.weight*2)
       img.setSize(dim, dim)
+    console.debug("ok.")
     @
 
   computeDistribution: -> 
+    console.debug("computingDistribution...")
     # todo
-    margin = 10
     x = 0
     y = 0
     heights = []
@@ -44,11 +48,12 @@ class Engine
         for imgH in heights
           if(imgH.h > maxHeight)
             maxHeight = imgH.h
-        y += maxHeight+margin
+        y += maxHeight
         heights = []
       heights.push(img)
       img.setPosition(x, y)
-      x += img.w+margin
+      x += img.w
+    console.debug("ok.")
     @
 
   feed: (pages) ->
@@ -70,30 +75,32 @@ class Engine
     removedPages = []
     removedPages.push(p) for p in tmp if p isnt undefined
 
-    console.log("newPages", newPages)
-    console.log("commonPages", commonPages)
-    console.log("removedPages", removedPages)
+    console.debug("    newPages = ", newPages)
+    console.debug(" commonPages = ", commonPages)
+    console.debug("removedPages = ", removedPages)
 
-    needRecomputeDistribution = newPages.length > 0 || removedPages.length > 0
-    needRecomputeWeights = needRecomputeDistribution
+    somethingHasChanged = newPages.length > 0 || removedPages.length > 0
 
     for href in newPages
-      node = pages.find('[href='+href+']')
+      node = pages.find('[href="'+href+'"]')
       @container.prepend(node)
 
     for href in removedPages
-      node = @container.find('[href='+href+']').remove()
+      node = @container.find('[href="'+href+'"]').remove()
 
     for href in commonPages
-      newNode = pages.find('[href='+href+']').first()
-      node = @container.find('[href='+href+']').remove()
+      newNode = pages.find('[href="'+href+'"]')
+      node = @container.find('[href="'+href+'"]')
       weight = newNode.attr('data-weight')
-      if node.attr('data-weight') isnt weight
+      currentWeight = node.attr('data-weight')
+      if currentWeight isnt weight
         node.attr('data-weight', weight)
-        needRecomputeWeights = true
-
-    @computeWeights if needRecomputeWeights
-    @computeDistribution if needRecomputeDistribution
+        somethingHasChanged = true
+    
+    if somethingHasChanged
+      @updatePagesFromDOM()
+      @computeWeights()
+      @computeDistribution()
     @
 
   start: -> 
@@ -108,9 +115,11 @@ $( ->
 
   engine = new Engine($('#pages')).start()
   feedIt = (onFeeded) ->
+    $('body').addClass('feedLoading')
     $.get document.location.pathname, (html) ->
       pages = $(html).find("#pages")
       engine.feed(pages)
+      $('body').removeClass('feedLoading')
       onFeeded and onFeeded()
   feedLoop = -> setTimeout((-> feedIt(feedLoop)), FEEDLOOPTIME)
   feedLoop()

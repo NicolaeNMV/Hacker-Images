@@ -26,10 +26,10 @@ object HackerNewsRetriever extends LinksRetriever {
         val tr = element.parents().find(_.tag().getName()=="tr").get
         val rank = tr.children().head.text().trim().dropRight(1).toDouble
         val points = tr.nextElementSibling().select("td.subtext span").text().trim().takeWhile(_.isDigit).toDouble
-        val rankPoints = (2+nodes.length-rank)*(500.0/nodes.length)
+        val rankPoints = (2+nodes.length-rank)
         val weight = rankPoints*rankPoints+points
         Link(attr.getValue, weight, element.text())
-      }).toList.sortBy(-_.weight).take(10)
+      }).toList.sortBy(-_.weight).take(14)
       val sum = notNormalizedLinks.map(_.weight).foldLeft(0.0)((a, b)=>a+b)
       notNormalizedLinks.map(element => element.copy(weight = element.weight/sum))
     })
