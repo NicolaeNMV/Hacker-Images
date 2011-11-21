@@ -2,6 +2,7 @@ package models
 
 import play.api._
 import play.api.libs.concurrent._
+import play.api.cache.BasicCache
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes._
@@ -20,21 +21,21 @@ object ScreenshotExtractor extends ImageExtractor {
 }
 
 object MostRelevantPageImageExtractor extends ImageExtractor {
+  val cache = new BasicCache()
+  def cacheKey(link:String) = "models.MostRelevantPageImageExtractor.cacheKey_for_"+link
+  val expirationSeconds = 5*60
+
   def getImageUrl(url:String): Promise[Option[String]] = {
-    Logger.debug("MostRelevantPageImageExtractor.getImageUrl("+url+")")
-    WS.url(url).get().map(html => {
-      val doc = Jsoup.parse(html.getResponseBody())
-      val images = doc.select("img").headOption.map( (image) => {
-        ImageUrlAbsolute.get(url,image.attr("src"))
-      });
-      Some(null)
+    cache.get[Option[String]](cacheKey(url)).map(Promise.pure(_)).getOrElse({
+      Logger.debug("MostRelevantPageImageExtractor.getImageUrl("+url+")")
+      WS.url(url).get().map(html => {
+        val src = Jsoup.parse(html.getResponseBody()).select("img").headOption.map(
+          image => new URI(url).resolve(image.attr("src")).toString()
+        )
+        cache.set(cacheKey(url), src)
+        src
+      })
     })
   }
-  object ImageUrlAbsolute {
-    def get(url: String, image: String):Option[String] = {
-      Some(new URI(url).resolve(image).toString())
-    }
-  }
-
 }
 

@@ -15,45 +15,37 @@ case class LinkWithImage(url: String, weight: Double, title: String, image: Stri
 
 object Application extends Controller {
 
-  def index = Action {
-    val links = HackerNewsRetriever.getLinks()
+  val imageExtractorModes = Map("screenshot" -> ScreenshotExtractor, "relevant" -> MostRelevantPageImageExtractor)
+  val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever)
+
+  def index = Action { (request) =>
+    val service = request.queryString.get("service").flatMap(_.headOption).getOrElse("hackernews")
+    val image = request.queryString.get("image").flatMap(_.headOption).getOrElse("screenshot")
+    imageExtractorModes.get(image).map(imageExtractor =>
+      linksRetrieverModes.get(service).map( linksRetriever =>
+        getResultPage(linksRetriever, imageExtractor) 
+      ).getOrElse(NotFound)
+    ).getOrElse(NotFound)
+  }
+
+  def getResultPage(linksRetriever:LinksRetriever, imageExtractor:ImageExtractor) = {
+    val links = linksRetriever.getLinks()
     AsyncResult(
       links.map(links => {
-        Logger.debug(links.length+" links retrieved.");
+        Logger.debug(links.length+" links found.");
         val images = links.flatMap(link => {
-          val imageUrl = ScreenshotExtractor.getImageUrl(link.url)
+          val imageUrl = imageExtractor.getImageUrl(link.url)
           imageUrl.value match { // FIXME this is blocking... 
             case Redeemed(url) => url.map(
               imgurl => LinkWithImage(link.url, link.weight, link.title, imgurl)
             )
           }
         })
-        Logger.debug(images.length+" images retrieved.");
-        Logger.debug(""+images);
+        Logger.debug(images.length+" images found.");
         Ok(views.html.index(images))
       })
     )
   }
 
-  def testHackerNews = Action {
-    AsyncResult(
-      HackerNewsRetriever.getLinks().map(list => {
-        val res = list.map(link => {
-          "<p>"+link.url+" => "+link.weight+"</p>"
-        }).mkString("\n\r")
-        Ok(res).withHeaders( ("Content-Type", "text/html") )
-      })
-    )
-  }
-  
-  def url2Image (url: String) = Action {
-    AsyncResult({
-      MostRelevantPageImageExtractor.getImageUrl(url).map(list => {
-          list.map( list => {
-            Ok(""+list)
-          }).getOrElse(Ok("Not found"))
-      })
-    })
-  }
 
 }

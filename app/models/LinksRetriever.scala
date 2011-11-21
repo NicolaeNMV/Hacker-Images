@@ -2,6 +2,7 @@ package models
 
 import play.api._
 import play.api.libs.concurrent.{Promise}
+import play.api.cache.BasicCache
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes._
@@ -15,24 +16,45 @@ trait LinksRetriever {
 }
 
 object HackerNewsRetriever extends LinksRetriever {
-  val url = "http://news.ycombinator.com/news";
+  
+  val url = "http://news.ycombinator.com/news"
+  val cache = new BasicCache()
+  val cacheKey = "models.HackerNewsRetriever.cacheKey"
+  val expirationSeconds = 10
+
   def getLinks(): Promise[List[Link]] = {
-    WS.url(url).get().map(response => {
-      Logger.debug(url+" getted.");
-      val doc = Jsoup.parse(response.getResponseBody);
-      val nodes = doc.select("td.title a[href^=http://]:not([href$=.pdf])")
+    cache.get[List[Link]](cacheKey).map(Promise.pure(_)).getOrElse({
+      WS.url(url).get().map(response => {
+        Logger.debug(url+" getted.");
+        var normalizedLinks = List[Link]()
+        try {
+          normalizedLinks = getLinksFromHtml(response.getResponseBody);
+        } catch {
+          case e:Exception =>
+            e.printStackTrace();
+            Logger.error(e.getMessage());
+        }
+        cache.set(cacheKey, normalizedLinks, expirationSeconds)
+        normalizedLinks
+      })
+    })
+  }
+
+  def getLinksFromHtml(html:String): List[Link] = {
+    val doc = Jsoup.parse(html);
+    val nodes = doc.select("td.title a[href^=http://]:not([href$=.pdf])");
       val notNormalizedLinks = nodes.map(element => {
         val attr = element.attributes.find(_.getKey=="href").get
         val tr = element.parents().find(_.tag().getName()=="tr").get
-        val rank = tr.children().head.text().trim().dropRight(1).toDouble
-        val points = tr.nextElementSibling().select("td.subtext span").text().trim().takeWhile(_.isDigit).toDouble
-        val rankPoints = (2+nodes.length-rank)
+        val rankStr = tr.children().head.text().trim().dropRight(1)
+        val pointsStr = tr.nextElementSibling().select("td.subtext span").text().trim().takeWhile(_.isDigit)
+        val rankPoints = if(rankStr.isEmpty) 0.0 else 2+nodes.length-rankStr.toDouble
+        val points = if(pointsStr.isEmpty) 0.0 else pointsStr.toDouble
         val weight = rankPoints*rankPoints+points
         Link(attr.getValue, weight, element.text())
-      }).toList.sortBy(-_.weight).take(14)
+      }).toList.filter(_.weight>0.0).sortBy(-_.weight).take(14);
       val sum = notNormalizedLinks.map(_.weight).foldLeft(0.0)((a, b)=>a+b)
       notNormalizedLinks.map(element => element.copy(weight = element.weight/sum))
-    })
   }
 }
 
