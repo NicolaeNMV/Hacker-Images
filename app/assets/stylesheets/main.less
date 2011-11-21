@@ -1,3 +1,16 @@
+.box-sizing(@prop) {
+  -webkit-box-sizing: @prop;
+  -moz-box-sizing: @prop;
+  box-sizing: @prop;
+}
+
+.transition(@prop) {
+  -webkit-transition: @prop;
+  -moz-transition: @prop;
+  -o-transition: @prop;
+  transition: @prop;
+}
+
 html, body {
   background: #333;
   color: white;
@@ -21,11 +34,19 @@ header {
 footer {
 
 }
-
 #pages {
   position: relative;
   width: 800px;
   margin: 20px auto;
+  &.transitionStarted {
+    .page {
+      .transition(2s);
+      .caption {
+        .transition(opacity 0.5s);
+      }
+    }
+
+  }
   .page {
     position: absolute;
     top: 0;
@@ -35,13 +56,16 @@ footer {
       bottom: 0.4em;
       left: 0;
       font-size: 0.8em;
-      background: rgba(0,0,0,0.5);
-      color: white;
-      display: none;
+      padding: 5px;
+      width: 100%;
+      .box-sizing(border-box);
+      background: white;
+      color: black;
+      opacity: 0.8;
     }
     &:hover {
       .caption {
-        display: block;
+        opacity: 0;
       }
     }
   }
