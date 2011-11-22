@@ -1,8 +1,10 @@
 package models
 
 import play.api._
-import play.api.libs.concurrent.{Promise}
+import play.api.libs.concurrent._
 import play.api.cache.BasicCache
+
+import com.ning.http.client.Response
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes._
@@ -24,11 +26,20 @@ object HackerNewsRetriever extends LinksRetriever {
 
   def getLinks(): Promise[List[Link]] = {
     cache.get[List[Link]](cacheKey).map(Promise.pure(_)).getOrElse({
-      WS.url(url).get().map(response => {
-        Logger.debug(url+" getted.");
-        val links = getLinksFromHtml(response.getResponseBody);
-        cache.set(cacheKey, links, expirationSeconds)
-        links
+      WS.url(url).get().extend(promise => {
+        promise.value match {
+          case Redeemed(response) => {
+            Logger.debug(url+" getted.");
+            val links = getLinksFromHtml(response.getResponseBody);
+            cache.set(cacheKey, links, expirationSeconds)
+            links
+          }
+          case Thrown(e:Exception) => {
+            Logger.error("HackerNews unable to retrieved ("+e.getMessage()+")");
+            e.printStackTrace()
+            Nil
+          }
+        }
       })
     })
   }
