@@ -41,6 +41,7 @@ object Application extends Controller {
             )
           }
         })
+        // TODO reNormalize
         Logger.debug(images.length+" images found.");
         Ok(views.html.index(images))
       })

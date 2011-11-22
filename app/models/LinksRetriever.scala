@@ -20,20 +20,13 @@ object HackerNewsRetriever extends LinksRetriever {
   val url = "http://news.ycombinator.com/news"
   val cache = new BasicCache()
   val cacheKey = "models.HackerNewsRetriever.cacheKey"
-  val expirationSeconds = 10
+  val expirationSeconds = 5
 
   def getLinks(): Promise[List[Link]] = {
     cache.get[List[Link]](cacheKey).map(Promise.pure(_)).getOrElse({
       WS.url(url).get().map(response => {
         Logger.debug(url+" getted.");
-        var normalizedLinks = List[Link]()
-        try {
-          normalizedLinks = getLinksFromHtml(response.getResponseBody);
-        } catch {
-          case e:Exception =>
-            e.printStackTrace();
-            Logger.error(e.getMessage());
-        }
+        val normalizedLinks = getLinksFromHtml(response.getResponseBody);
         cache.set(cacheKey, normalizedLinks, expirationSeconds)
         normalizedLinks
       })
