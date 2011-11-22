@@ -15,7 +15,9 @@ case class LinkWithImage(url: String, weight: Double, title: String, image: Stri
 
 object Application extends Controller {
 
-  val imageExtractorModes = Map("screenshot" -> ScreenshotExtractor, "relevant" -> MostRelevantPageImageExtractor)
+  val imageExtractorModes = Map("screenshot" -> ScreenshotExtractor
+    /*, "relevant" -> MostRelevantPageImageExtractor*/ // Disabled for now
+    )
   val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever)
 
   def index = Action { (request) =>

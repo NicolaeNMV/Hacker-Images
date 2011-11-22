@@ -23,7 +23,7 @@ class Engine
     @
 
   updatePagesFromDOM: ->
-    @imgs = @container.find('.page').map(-> new Box($(this), @) )
+    @imgs = @container.find('.page:not(.removing)').map(-> new Box($(this), @) )
 
   computeWeights: ->
     console.debug("computingWeights...")
@@ -83,10 +83,16 @@ class Engine
 
     for href in newPages
       node = pages.find('[href="'+href+'"]')
-      @container.prepend(node)
+      node.addClass('newNode')
+      @container.append(node)
+      node.find('img').bind('load', ->
+        setTimeout((-> node.removeClass('newNode')), 500)
+      )
 
     for href in removedPages
-      node = @container.find('[href="'+href+'"]').remove()
+      node = @container.find('[href="'+href+'"]')
+      node.addClass('removing')
+      setTimeout((-> node.remove()), 2000) # TODO : animate remove
 
     for href in commonPages
       newNode = pages.find('[href="'+href+'"]')
