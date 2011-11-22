@@ -33,15 +33,16 @@ object Application extends Controller {
     AsyncResult(
       links.map(links => {
         Logger.debug(links.length+" links found.");
-        val images = links.flatMap(link => {
+        val notNormalizedLinks = links.flatMap(link => {
           val imageUrl = imageExtractor.getImageUrl(link.url)
           imageUrl.value match { // FIXME this is blocking... 
             case Redeemed(url) => url.map(
               imgurl => LinkWithImage(link.url, link.weight, link.title, imgurl)
             )
           }
-        })
-        // TODO reNormalize
+        }).take(16)
+        val sum = notNormalizedLinks.map(_.weight).foldLeft(0.0)((a, b)=>a+b)
+        val images = notNormalizedLinks.map(element => element.copy(weight = element.weight/sum))
         Logger.debug(images.length+" images found.");
         Ok(views.html.index(images))
       })

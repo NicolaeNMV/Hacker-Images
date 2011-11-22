@@ -29,7 +29,7 @@ class Engine
     console.debug("computingWeights...")
     maxDim = @width
     for img in @imgs
-      dim = maxDim * (img.weight*2)
+      dim = maxDim * (img.weight*2.6)
       img.setSize(dim, dim)
     console.debug("ok.")
     @
