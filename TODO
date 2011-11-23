@@ -1,0 +1,7 @@
+* Using the Underscore.js lib, because I'm too lazy...
+* Create DOM from JS logic instead of creating JS logic upon DOM
+  * Serving JSON instead of getting the all page each refresh
+* Create a LinksRetrieverStream from a LinksRetriever
+* Binding WebSockets to the LinksRetrieverStream
+* When refreshing, waiting images load before animating
+* Fix encoding
