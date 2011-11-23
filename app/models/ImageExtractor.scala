@@ -15,8 +15,9 @@ trait ImageExtractor {
 }
 
 object ScreenshotExtractor extends ImageExtractor {
+  val size = "1024x1024"
   def getImageUrl(pageUrl:String): Promise[Option[String]] = {
-    Promise.pure(Some( "http://immediatenet.com/t/fs?Size=1024x1024&URL="+pageUrl) )
+    Promise.pure(Some( "http://immediatenet.com/t/fs?Size="+size+"&URL="+pageUrl) )
   }
 }
 
