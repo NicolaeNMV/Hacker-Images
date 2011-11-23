@@ -126,7 +126,7 @@ footer {
       top: 0;
       left: 0;
       font-size: 0.8em;
-      padding: 10% 1%;
+      padding: 10% 4%;
       font-family: ;
       text-align: center;
       width: 100%;
@@ -135,6 +135,18 @@ footer {
       background: rgba(0,0,0,0.7);
       color: white;
       opacity: 0;
+      &:after {
+        content: close-quote;
+        font-size: 1.4em;
+        line-height: 0;
+        vertical-align: middle;
+      }
+      &:before {
+        content: open-quote;
+        font-size: 1.4em;
+        line-height: 0;
+        vertical-align: middle;
+      }
     }
     &:hover {
       .caption {

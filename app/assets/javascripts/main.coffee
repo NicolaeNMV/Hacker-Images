@@ -113,7 +113,7 @@ class Engine
     # Transform placements in positions
     for obj in objs
       obj.box.setPosition(@unitDim*obj.position[0], @unitDim*obj.position[1])
-      obj.box.setFontSize(obj.box.w/2+'em')
+      obj.box.setFontSize((0.2+obj.box.w*0.6)+'em')
     @
 
   # Usage: setPages( [ { href: "http://greweb.fr/", weight: 0.15, caption: "my awesome blog", img: "http://greweb.fr/image.png" }, ... ] )
