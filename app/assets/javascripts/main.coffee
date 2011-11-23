@@ -1,49 +1,47 @@
 
 window['console'] = {log: $.noop, debug: $.noop, error: $.noop} if !window['console']
 
-class Box
-  constructor: (@node, @container) -> 
-    @img = @node.find('img')
-    # to be deleted (don't read the DOM but write it)
-    @weight = parseFloat(@node.attr('data-weight'))
+pageTmpl = _.template('<a class="page" href="<%= href %>" target="blank"><img src="<%= src %>" /><span class="caption"><%= caption %></span></a>')
+
+# To replace Box
+class Page
+  constructor: (@href, @weight, @src, @caption) ->
+
+  insert: (container)->
+    node = @node = $(pageTmpl(this))#.addClass('newNode')
+    @node.find('img').bind('load', ->
+      setTimeout((-> node.removeClass('newNode')), 500)
+    )
+    @node.appendTo(container)
     @
-  updateWeight: ->
+
+  update: (values)->
+    hasChanged = false
+    if @weight isnt values.weight
+      hasChanged = true
+      @weight = values.weight
+    hasChanged
+
+  remove: ->
+    @node.addClass('removing')
+    setTimeout((=> @node.remove()), 2000)
+    @
+
+  setGridSize: (@w, @h) -> @
   setPosition: (@x, @y) -> 
     @node.css(top: @y, left: @x)
     @
 
-  setGridSize: (@w, @h) ->
-
-    @
   setFontSize: (fs) ->
     @node.css('font-size', fs)
     @
   setSize: (w, h) -> 
-    #@img.width(@w)
     @node.width(w).height(h)
     @
 
 class Engine
   constructor: (@container, @unitDim = 100, @margin = 10) -> 
-    @updateWidth()
-    @updatePagesFromDOM()
-    @
-
-  updateWidth: ->
-    units = Math.floor((window.innerWidth-@margin)/@unitDim)
-    @width = @unitDim*units
-    @container.width(@width)
-
-  # to be deleted...
-  updatePagesFromDOM: ->
-    @boxes = @container.find('.page:not(.removing)').map(-> new Box($(this), @) )
-
-  # Compute the weight of each box and update its size
-  # The weight is projected into a simplified grid
-  computeWeights: ->
-    min = Infinity
-    max = -Infinity
-    scales = [
+    @scales = [
       [1,1],
       [2,1],
       [2,2],
@@ -53,119 +51,88 @@ class Engine
       [4,3],
       [4,4]
     ]
-    n = scales.length
-    for img in @boxes
-      if img.weight > max
-        max = img.weight
-      if img.weight < min
-        min = img.weight
+    @pages = []
+    @updateWidth()
+    @
 
-    for img in @boxes
-      scaledValue = Math.floor( (( img.weight - min ) / (max - min)) * (n-1) ) # Scale weights to linear [0, n-1] int range
-      [w, h] = scales[scaledValue]
+  updateWidth: ->
+    units = Math.floor (window.innerWidth-@margin)/@unitDim
+    @width = @unitDim*units
+    @container.width(@width)
+
+  # Compute the weight of each box and update its size
+  # The weight is projected into a simplified grid
+  computeWeights: ->
+    n = @scales.length
+    weights = _(@pages).chain().map((b) -> b.weight)
+    min = weights.min().value()
+    max = weights.max().value()
+    for img in @pages
+      scaledValue = Math.floor (n-1)*(img.weight-min)/(max-min) # Scale weights to linear [0, n-1] int range
+      [w, h] = @scales[scaledValue]
       img.setGridSize(w, h).setSize(@unitDim*w-@margin, @unitDim*h-@margin)
     @
 
   # Algorithm trying to distribute all images on the page into the best possible arrangement (fill the gaps).
   computeDistribution: -> 
     windowUnitWidth = Math.floor(@width / @unitDim)
+    objs=_.map(@pages, (box) -> box: box, w: box.w, h: box.h, placed: false, position: [0,0]).sort((a, b) -> b.w*b.h-a.w*a.h)
     
-    objs=[]
-    for box in @boxes
-      objs.push(box: box, w: box.w, h: box.h, placed: false, position: [0,0])
+    nextHeight = -> return obj.h for obj in objs when !obj.placed
 
-    objs.sort( (a, b) -> b.w*b.h-a.w*a.h )
-
-    nextHeight = ->
-      for obj in objs
-        if !obj.placed
-          return obj.h
-      0
-
-    # Try to create a line of images by consuming boxes (recursive function)
-    # The max line bounds are (maxWidth, maxHeight) 
-    # It starts from (xOrigin, yOrigin)
-    placeLine = (xOrigin, yOrigin, maxWidth, maxHeight) ->
+    # Try to create a line of images by consuming boxes (recursive function), the max line bounds are (w, h), it starts from (x, y)
+    placeLine = (x, y, w, h) ->
       # take the higher box which fits constraints
-      best = null
-      for obj in objs
-        if !obj.placed and obj.w <= maxWidth and obj.h <= maxHeight
-          if !best or ( obj.h > best.h )
-            best = obj
-
+      best = obj for obj in objs when !obj.placed and obj.w <= w and obj.h <= h and (!best or obj.h > best.h)
       if best
-        best.position = [xOrigin, yOrigin]
+        best.position = [x, y]
         best.placed = true
-        # If it fit the height, just go right
-        if best.h == maxHeight
-          placeLine(xOrigin+best.w, yOrigin, maxWidth-best.w, maxHeight)
-        else # If it's not the same height, split into two lines
-          placeLine(xOrigin+best.w, yOrigin, maxWidth-best.w, best.h)
-          placeLine(xOrigin, yOrigin+best.h, maxWidth, maxHeight-best.h)
+        # If it fit the height, just go right, else split into two lines
+        if best.h == h
+          placeLine x+best.w, y, w-best.w, h
+        else
+          placeLine x+best.w, y, w-best.w, best.h
+          placeLine x, y+best.h, w, h-best.h
 
+    # distribute while there are boxes
     y = 0
-    h = nextHeight()
-    while(h>0)
-      h = nextHeight()
+    while h = nextHeight()
       placeLine 0, y, windowUnitWidth, h
       y += h
 
     # Transform placements in positions
     for obj in objs
-      obj.box.setPosition(@unitDim*obj.position[0], @unitDim*obj.position[1])
-      obj.box.setFontSize((0.2+obj.box.w*0.6)+'em')
+      obj.box.setPosition(@unitDim*obj.position[0], @unitDim*obj.position[1]).setFontSize((0.2+obj.box.w*0.6)+'em') 
     @
 
-  # Usage: setPages( [ { href: "http://greweb.fr/", weight: 0.15, caption: "my awesome blog", img: "http://greweb.fr/image.png" }, ... ] )
+  # Usage: setPages( [ { href: "http://greweb.fr/", weight: 0.15, img: "http://greweb.fr/image.png", caption: "my awesome blog" }, ... ] )
   setPages: (pages) ->
-
-
-
-  feed: (pages) ->
-    newPages = []
-    commonPages = []
-    removedPages = @container.find('.page').map(-> $(this).attr('href') )
-    $(pages).find('.page').map(-> $(this).attr('href')).each( (i, href) -> 
-      found = false
-      for i in [0..removedPages.length]
-        if(removedPages[i] == href)
-          commonPages.push(href)
-          removedPages[i] = undefined
-          found = true
-          break
-      if not found
-        newPages.push(href)
-    )
-    tmp = removedPages
-    removedPages = []
-    removedPages.push(p) for p in tmp if p isnt undefined
-
+    currentHref = _.map(@pages, (box) -> box.href)
+    pagesHref = _.map(pages, (p) -> p.href)
+    commonPages = _.intersection(pagesHref, currentHref)
+    newPages = _.difference(pagesHref, currentHref)
+    removedPages = _.difference(currentHref, pagesHref)
+    
     somethingHasChanged = newPages.length > 0 || removedPages.length > 0
 
     for href in newPages
-      node = pages.find('[href="'+href+'"]')
-      node.addClass('newNode')
-      @container.append(node)
-      node.find('img').bind('load', ->
-        setTimeout((-> node.removeClass('newNode')), 500)
-      )
-
+      newPage = _.find(pages, (p)->p.href==href)
+      page = new Page(newPage.href, newPage.weight, newPage.src, newPage.caption)
+      page.insert(@container)
+      @pages.push(page)
+    
     for href in removedPages
-      node = @container.find('[href="'+href+'"]')
-      node.addClass('removing')
-      setTimeout((-> node.remove()), 2000) # TODO : animate remove
-
+      page = _.find(@pages, (p)->p.href==href)
+      page.remove()
+      @pages = _.without(@pages, page)
+    
     for href in commonPages
-      newNode = pages.find('[href="'+href+'"]')
-      node = @container.find('[href="'+href+'"]')
-      weight = newNode.attr('data-weight')
-      currentWeight = node.attr('data-weight')
-      if currentWeight isnt weight
-        node.attr('data-weight', weight)
+      newPage = _.find(pages, (p)->p.href==href)
+      page = _.find(@pages, (p)->p.href==href)
+      if page.update(newPage)
         somethingHasChanged = true
     
     if somethingHasChanged
-      @updatePagesFromDOM()
       @computeWeights()
       @computeDistribution()
     @
@@ -174,7 +141,6 @@ class Engine
     @computeWeights()
     @computeDistribution()
     setTimeout( (=> @container.addClass('transitionStarted')), 500)
-    # FIXME: don't update each time...
     lastWidth = null
     $(window).bind('resize', => 
       @updateWidth()
@@ -189,25 +155,29 @@ $( ->
   engine = new Engine($('#pages')).start()
 
   # FIXME to be deleted
+
+  attr = $('#pages .page').map( () ->
+    href: $(this).attr('href')
+    weight: parseFloat($(this).attr('data-weight'))
+    src: $(this).find('img').attr('src')
+    caption: $(this).find('.caption').text()
+  )
+  $('#pages').empty()
+  engine.setPages(attr)
+
   FEEDLOOPTIME = 10000; # 10s
   feedIt = (onFeeded) ->
     $('body').addClass('feedLoading')
     $.get document.location.pathname, (html) ->
-      pages = $(html).find("#pages")
-      engine.feed(pages)
+      pages = $(html).find("#pages .page").map( () ->
+        href: $(this).attr('href')
+        weight: parseFloat($(this).attr('data-weight'))
+        src: $(this).find('img').attr('src')
+        caption: $(this).find('.caption').text()
+      )
+      engine.setPages(pages)
       $('body').removeClass('feedLoading')
       onFeeded and onFeeded()
   feedLoop = -> setTimeout((-> feedIt(feedLoop)), FEEDLOOPTIME)
   feedLoop()
 )
-
-### 
-      TODO
-      $(html).find("#pages .page").map(-> 
-        href: $(this).attr('href'),
-        weight: $(this).attr('data-weight'),
-        image: $(this).find('img').attr('src'),
-        caption: $(this).find('.caption').text()
-      ) 
-###
-
