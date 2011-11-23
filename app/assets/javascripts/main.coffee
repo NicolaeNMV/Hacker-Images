@@ -11,26 +11,54 @@ class Box
     @node.css(top: @y, left: @x)
     @
 
-  setSize: (@w, @h) -> 
+  setGridSize: (@w, @h) ->
+
+    @
+  setSize: (w, h) -> 
     #@img.width(@w)
-    @node.width(@w).height(@h)
+    @node.width(w).height(h)
     @
 
 class Engine
 
-  constructor: (@container, @width=800) -> 
+  constructor: (@container) -> 
+    @updateWidth()
+    @unitDim = 80
     @updatePagesFromDOM()
     @
+
+  updateWidth: ->
+    @width = @container.width()
+
 
   updatePagesFromDOM: ->
     @imgs = @container.find('.page:not(.removing)').map(-> new Box($(this), @) )
 
   computeWeights: ->
     console.debug("computingWeights...")
-    maxDim = @width
+    min = Infinity
+    max = -Infinity
+    scales = [
+      [1,1],
+      [2,1],
+      [2,2],
+      [3,2],
+      [4,2],
+      [3,3],
+      [4,3],
+      [4,4]
+    ]
+    n = scales.length
     for img in @imgs
-      dim = maxDim * (img.weight*2.6)
-      img.setSize(dim, dim)
+      if img.weight > max
+        max = img.weight
+      if img.weight < min
+        min = img.weight
+
+    for img in @imgs
+      scaledValue = Math.floor( (( img.weight - min ) / (max - min)) * (n-1) )
+      [w, h] = scales[scaledValue]
+      img.setGridSize(w, h).setSize(@unitDim*w, @unitDim*h)
     console.debug("ok.")
     @
 
@@ -42,17 +70,17 @@ class Engine
     heights = []
     maxW = @width
     for img in @imgs
-      if( x > maxW - img.w)
+      if( x > maxW - @unitDim*img.w)
         x = 0
         maxHeight = 0
         for imgH in heights
-          if(imgH.h > maxHeight)
-            maxHeight = imgH.h
+          if(@unitDim*imgH.h > maxHeight)
+            maxHeight = @unitDim*imgH.h
         y += maxHeight
         heights = []
       heights.push(img)
       img.setPosition(x, y)
-      x += img.w
+      x += @unitDim*img.w
     console.debug("ok.")
     @
 
@@ -113,6 +141,10 @@ class Engine
     @computeWeights()
     @computeDistribution()
     setTimeout( (=> @container.addClass('transitionStarted')), 500)
+    $(window).bind('resize', => 
+      @updateWidth()
+      @computeDistribution()
+    )
     @
 
 $( -> 
