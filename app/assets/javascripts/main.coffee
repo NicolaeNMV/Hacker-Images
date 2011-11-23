@@ -32,10 +32,9 @@ class Engine
 
 
   updatePagesFromDOM: ->
-    @imgs = @container.find('.page:not(.removing)').map(-> new Box($(this), @) )
+    @boxes = @container.find('.page:not(.removing)').map(-> new Box($(this), @) )
 
   computeWeights: ->
-    console.debug("computingWeights...")
     min = Infinity
     max = -Infinity
     scales = [
@@ -49,39 +48,61 @@ class Engine
       [4,4]
     ]
     n = scales.length
-    for img in @imgs
+    for img in @boxes
       if img.weight > max
         max = img.weight
       if img.weight < min
         min = img.weight
 
-    for img in @imgs
+    for img in @boxes
       scaledValue = Math.floor( (( img.weight - min ) / (max - min)) * (n-1) )
       [w, h] = scales[scaledValue]
       img.setGridSize(w, h).setSize(@unitDim*w, @unitDim*h)
-    console.debug("ok.")
     @
 
   computeDistribution: -> 
-    console.debug("computingDistribution...")
-    # todo
-    x = 0
+    windowUnitWidth = Math.floor(@width / @unitDim)
+    
+    objs=[]
+    for box in @boxes
+      objs.push(box: box, placed: false, position: [0,0])
+
+    objs.sort( (a, b) -> b.box.weight-a.box.weight )
+
+    nextHeight = ->
+      for obj in objs
+        if !obj.placed
+          return obj.box.h
+      0
+
+    placeLine = (xOrigin, yOrigin, maxWidth, maxHeight) ->
+      # take the higher box which fits constraints
+      best = null
+      for obj in objs
+        if !obj.placed and obj.box.w <= maxWidth and obj.box.h <= maxHeight
+          if !best or ( obj.box.h > best.box.h )
+            best = obj
+
+      if best
+        best.position = [xOrigin, yOrigin]
+        best.placed = true
+        # If it fit the height, just go right
+        if best.box.h == maxHeight
+          placeLine(xOrigin+best.box.w, yOrigin, maxWidth-best.box.w, maxHeight)
+        else # If it's not the same height, split into two lines
+          placeLine(xOrigin+best.box.w, yOrigin, maxWidth-best.box.w, best.box.h)
+          placeLine(xOrigin, yOrigin+best.box.h, maxWidth, maxHeight-best.box.h)
+
     y = 0
-    heights = []
-    maxW = @width
-    for img in @imgs
-      if( x > maxW - @unitDim*img.w)
-        x = 0
-        maxHeight = 0
-        for imgH in heights
-          if(@unitDim*imgH.h > maxHeight)
-            maxHeight = @unitDim*imgH.h
-        y += maxHeight
-        heights = []
-      heights.push(img)
-      img.setPosition(x, y)
-      x += @unitDim*img.w
-    console.debug("ok.")
+    h = nextHeight()
+    while(h>0)
+      h = nextHeight()
+      placeLine 0, y, windowUnitWidth, h
+      y += h
+
+    # Transform placements in positions
+    for obj in objs
+      obj.box.setPosition(@unitDim*obj.position[0], @unitDim*obj.position[1])
     @
 
   feed: (pages) ->
@@ -102,10 +123,6 @@ class Engine
     tmp = removedPages
     removedPages = []
     removedPages.push(p) for p in tmp if p isnt undefined
-
-    console.debug("    newPages = ", newPages)
-    console.debug(" commonPages = ", commonPages)
-    console.debug("removedPages = ", removedPages)
 
     somethingHasChanged = newPages.length > 0 || removedPages.length > 0
 
