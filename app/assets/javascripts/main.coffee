@@ -3,15 +3,15 @@ window['console'] = {log: $.noop, debug: $.noop, error: $.noop} if !window['cons
 
 pageTmpl = _.template('<a class="page" href="<%= href %>" target="blank"><img src="<%= src %>" /><span class="caption"><%= caption %></span></a>')
 
-# To replace Box
 class Page
   constructor: (@href, @weight, @src, @caption) ->
 
   insert: (container)->
-    node = @node = $(pageTmpl(this))#.addClass('newNode')
-    @node.find('img').bind('load', ->
+    node = @node = $(pageTmpl(this)).addClass('newNode')
+    img = new Image()
+    img.onload = ->
       setTimeout((-> node.removeClass('newNode')), 500)
-    )
+    img.src = @src
     @node.appendTo(container)
     @
 
@@ -138,9 +138,9 @@ class Engine
     @
 
   start: -> 
+    @container.addClass('transitionStarted')
     @computeWeights()
     @computeDistribution()
-    setTimeout( (=> @container.addClass('transitionStarted')), 500)
     lastWidth = null
     $(window).bind('resize', => 
       @updateWidth()
