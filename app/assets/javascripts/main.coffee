@@ -154,17 +154,6 @@ $( ->
 
   engine = new Engine($('#pages')).start()
 
-  # FIXME to be deleted
-
-  attr = $('#pages .page').map( () ->
-    href: $(this).attr('href')
-    weight: parseFloat($(this).attr('data-weight'))
-    src: $(this).find('img').attr('src')
-    caption: $(this).find('.caption').text()
-  )
-  $('#pages').empty()
-  engine.setPages(attr)
-
   FEEDLOOPTIME = 8000; # 8s
   feedIt = (onFeeded) ->
     $('body').addClass('feedLoading')
