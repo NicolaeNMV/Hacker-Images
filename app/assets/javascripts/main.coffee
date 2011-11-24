@@ -69,7 +69,8 @@ class Engine
     @
 
   updateWidth: ->
-    units = Math.floor (window.innerWidth-@margin)/@unitDim
+    min = _.map(@scales, (s)->s[0]).sort( (a,b) -> b-a )[0]
+    units = Math.max(min, Math.floor((window.innerWidth-@margin)/@unitDim))
     @width = @unitDim*units
     @container.width(@width)
 
