@@ -1,4 +1,3 @@
-* Serving JSON instead of getting the all page each refresh
 * Create a LinksRetrieverStream from a LinksRetriever
 * Binding WebSockets to the LinksRetrieverStream
 * Fix encoding
