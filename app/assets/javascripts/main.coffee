@@ -52,7 +52,20 @@ class Engine
       [4,4]
     ]
     @pages = []
+    @
+  
+  start: -> 
+    @container.addClass('transitionStarted')
     @updateWidth()
+    @computeWeights()
+    @computeDistribution()
+    lastWidth = null
+    $(window).bind('resize', => 
+      @updateWidth()
+      if lastWidth != @width
+        lastWidth = @width
+        @computeDistribution()
+    )
     @
 
   updateWidth: ->
@@ -137,18 +150,7 @@ class Engine
       @computeDistribution()
     @
 
-  start: -> 
-    @container.addClass('transitionStarted')
-    @computeWeights()
-    @computeDistribution()
-    lastWidth = null
-    $(window).bind('resize', => 
-      @updateWidth()
-      if lastWidth != @width
-        lastWidth = @width
-        @computeDistribution()
-    )
-    @
+
 
 $( -> 
 
