@@ -42,7 +42,7 @@ object Application extends Controller {
               imgurl => LinkWithImage(link.url, link.weight, link.title, imgurl)
             )
           }
-        }).take(20)
+        })
         val sum = notNormalizedLinks.map(_.weight).foldLeft(0.0)((a, b)=>a+b)
         val images = notNormalizedLinks.map(element => element.copy(weight = element.weight/sum))
         Logger.debug(images.length+" images found.");
