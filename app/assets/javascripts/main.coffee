@@ -165,19 +165,19 @@ $( ->
   $('#pages').empty()
   engine.setPages(attr)
 
-  FEEDLOOPTIME = 10000; # 10s
+  FEEDLOOPTIME = 8000; # 8s
   feedIt = (onFeeded) ->
     $('body').addClass('feedLoading')
-    $.get document.location.pathname, (html) ->
-      pages = $(html).find("#pages .page").map( () ->
-        href: $(this).attr('href')
-        weight: parseFloat($(this).attr('data-weight'))
-        src: $(this).find('img').attr('src')
-        caption: $(this).find('.caption').text()
+    $.get '/current.json', (json) ->
+      pages = _.map(json, (link) ->
+        href: link.url
+        weight: link.weight
+        src: link.image
+        caption: link.title
       )
       engine.setPages(pages)
       $('body').removeClass('feedLoading')
       onFeeded and onFeeded()
   feedLoop = -> setTimeout((-> feedIt(feedLoop)), FEEDLOOPTIME)
-  feedLoop()
+  feedIt(feedLoop)
 )

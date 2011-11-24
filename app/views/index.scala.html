@@ -1,4 +1,4 @@
-@(links:List[LinkWithImage])
+@()
 
 @main() {
 <header>
@@ -9,11 +9,7 @@
   <h2>renew the way to preview news</h2>
 </header>
 
-<div id="pages">
-  @for(link <- links) {
-  <a class="page" href="@link.url" target="_blank" data-weight="@link.weight"><img src="@link.image" /><span class="caption">@link.title</span></a>
-  }
-</div>
+<div id="pages"></div>
 
 <footer>Hacker Exposé, A <a href="http://playexperiments.com">Play! Experiments</a>, made by <a href="http://gaetanrenaudeau.fr">Gaëtan Renaudeau</a> and <a href="http://github.com/adrenalinup">Nicolae Namolovan</a>. see <a href="http://github.com/adrenalinup/Hacker-Images">source code</a></footer>
 }
