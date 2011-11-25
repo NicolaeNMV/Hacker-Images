@@ -46,7 +46,7 @@ object HackerNewsRetriever extends LinksRetriever {
 
   def getLinksFromHtml(html:String): List[Link] = {
     val doc = Jsoup.parse(html);
-    val nodes = doc.select("td.title a[href^=http://]:not([href$=.pdf])");
+    val nodes = doc.select("td.title a[href^=http]:not([href$=.pdf])");
     nodes.map(element => {
       val attr = element.attributes.find(_.getKey=="href").get
       val tr = element.parents().find(_.tag().getName()=="tr").get
@@ -59,11 +59,3 @@ object HackerNewsRetriever extends LinksRetriever {
     }).toList.filter(_.weight>0.0).sortBy(-_.weight);
   }
 }
-
-/*
-// some exception when trying to use this, Mmh, sounds like I found a bug?
-object TestRetriever extends LinksRetriever {
-  val datas = Range(1,7).toList.map(n => Link("http://localhost:9000/public/images/test/0"+n+".png", n) )
-  def getLinks(): Promise[List[Link]] = Promise.pure(datas)
-}
-*/
