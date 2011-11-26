@@ -11,6 +11,8 @@ import org.jsoup.select.Elements
 
 import play.api.libs.concurrent._
 
+import scala.util.parsing.json._
+
 case class LinkWithImage(url: String, weight: Double, title: String, image: String) 
 
 object Application extends Controller {
@@ -24,31 +26,28 @@ object Application extends Controller {
     Ok(views.html.index())
   }
 
-  def getJson = Action { (request) =>
-    val service = request.queryString.get("service").flatMap(_.headOption).getOrElse("hackernews")
-    val image = request.queryString.get("image").flatMap(_.headOption).getOrElse("screenshot")
-    imageExtractorModes.get(image).map(imageExtractor =>
-      linksRetrieverModes.get(service).map( linksRetriever =>
-          AsyncResult(
-            getResult(linksRetriever, imageExtractor).extend(promise => {
-              promise.value match {
-                case Redeemed(links) => { 
-                  import scala.util.parsing.json._
-                  val json = new JSONArray(links.map(link => {
-                    new JSONObject(Map( 
-                      "url" -> link.url,
-                      "weight" -> link.weight,
-                      "title" -> link.title,
-                      "image" -> link.image ))
-                  }))
-                  Ok(json.toString()).as("application/json")
-                }
-              }
-            })
-          )
-      ).getOrElse(NotFound)
-    ).getOrElse(NotFound)
+  def get(format:String) = Action { (request) =>
+    val linksRetriever:LinksRetriever = request.queryString.get("service").flatMap(_.headOption).flatMap(linksRetrieverModes.get(_)).getOrElse(HackerNewsRetriever)
+    val imageExtractor:ImageExtractor = request.queryString.get("image"  ).flatMap(_.headOption).flatMap(imageExtractorModes.get(_)).getOrElse(ScreenshotExtractor)
+    AsyncResult(
+      getResult(linksRetriever, imageExtractor).extend(promise => {
+        promise.value match {
+          case Redeemed(links) => format match {
+            case "json" => Json(links)
+            case _ => Status(415)("Format Not Supported")
+          }
+        }
+      })
+    )
   }
+
+
+  def Json(a:JSONType) = Ok(a.toString()).as("application/json")
+
+  implicit def linkWithImageToJSONObject(link:LinkWithImage):JSONObject = new JSONObject(Map( "url" -> link.url, "weight" -> link.weight, "title" -> link.title, "image" -> link.image ))
+
+  implicit def listToJSONArray(list:List[LinkWithImage]):JSONType = new JSONArray(list.map(linkWithImageToJSONObject(_)))
+
 
   def getResult(linksRetriever:LinksRetriever, imageExtractor:ImageExtractor):Promise[List[LinkWithImage]] = {
     val links = linksRetriever.getLinks()

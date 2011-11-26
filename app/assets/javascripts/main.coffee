@@ -160,7 +160,7 @@ $( ->
   FEEDLOOPTIME = 8000; # 8s
   feedIt = (onFeeded) ->
     $('body').addClass('feedLoading')
-    $.get '/current.json', (json) ->
+    $.getJSON '/current.json', (json) ->
       pages = _.map(json, (link) ->
         href: link.url
         weight: link.weight

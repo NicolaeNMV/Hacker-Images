@@ -4,7 +4,7 @@
 
 # Home page
 GET     /                           controllers.Application.index()
-GET     /current.json               controllers.Application.getJson()
+GET     /current.:format            controllers.Application.get(format)
 
 
 # Map static resources from the /public folder to the /assets URL path
