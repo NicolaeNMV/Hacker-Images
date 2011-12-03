@@ -13,7 +13,10 @@ import play.api.libs.concurrent._
 
 import scala.util.parsing.json._
 
-case class LinkWithImage(url: String, weight: Double, title: String, image: String) 
+/**
+ * Link and Image joined class
+ */
+case class LinkWithImage(link: Link, image: Image)
 
 object Application extends Controller {
 
@@ -44,7 +47,8 @@ object Application extends Controller {
 
   def Json(a:JSONType) = Ok(a.toString()).as("application/json")
 
-  implicit def linkWithImageToJSONObject(link:LinkWithImage):JSONObject = new JSONObject(Map( "url" -> link.url, "weight" -> link.weight, "title" -> link.title, "image" -> link.image ))
+  implicit def linkWithImageToJSONObject(lwi:LinkWithImage):JSONObject = new JSONObject(Map( "url" -> lwi.link.url, "weight" -> lwi.link.weight,
+    "title" -> lwi.link.title, "image" -> lwi.image.url ))
 
   implicit def listToJSONArray(list:List[LinkWithImage]):JSONType = new JSONArray(list.map(linkWithImageToJSONObject(_)))
 
@@ -54,10 +58,10 @@ object Application extends Controller {
     links.map(links => {
       Logger.debug(links.length+" links found.");
       val images = links.flatMap(link => {
-        val imageUrl = imageExtractor.getImageUrl(link.url)
-        imageUrl.value match { // FIXME this is blocking... 
+        val image = imageExtractor.getImage(link.url)
+        image.value match { // FIXME this is blocking... 
           case Redeemed(url) => url.map(
-            imgurl => LinkWithImage(link.url, link.weight, link.title, imgurl)
+            img => LinkWithImage(link, img)
           )
         }
       })

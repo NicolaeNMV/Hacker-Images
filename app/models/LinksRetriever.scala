@@ -11,26 +11,34 @@ import org.jsoup.nodes._
 
 import collection.JavaConversions._
 
-case class Link(url: String, weight: Double, title: String)
-
+/**
+ * A LinksRetriever retrieves a set of links and weights from any source.
+ */
 trait LinksRetriever {
   def getLinks(): Promise[List[Link]]
 }
 
+case class Link(url: String, weight: Double, title: String)
+
+/**
+ * HackerNews implementation
+ */
 object HackerNewsRetriever extends LinksRetriever {
   
   val url = "http://news.ycombinator.com/news"
+  // TODO: move the cache to the controller side (top level)
   val cache = new BasicCache()
   val cacheKey = "models.HackerNewsRetriever.cacheKey"
   val expirationSeconds = 5
 
   def getLinks(): Promise[List[Link]] = {
     cache.get[List[Link]](cacheKey).map(Promise.pure(_)).getOrElse({
+      // TODO: reduce the code bellow, we should not care about exceptions (handle it on top level with play)
       WS.url(url).get().extend(promise => {
         promise.value match {
           case Redeemed(response) => {
             Logger.debug(url+" getted.");
-            val links = getLinksFromHtml(response.getResponseBody);
+            val links = getLinksFromHtml(response.body);
             cache.set(cacheKey, links, expirationSeconds)
             links
           }
