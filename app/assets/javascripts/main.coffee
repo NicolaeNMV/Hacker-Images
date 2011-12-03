@@ -1,10 +1,11 @@
 
 window['console'] = {log: $.noop, debug: $.noop, error: $.noop} if !window['console']
 
-pageTmpl = _.template('<a class="page" href="<%= href %>" target="blank"><img src="<%= src %>" /><span class="caption"><%= caption %></span></a>')
+pageTmpl = _.template('<div class="page"><img src="<%= src %>" /><a class="feedback" target="_blank" href="<%= feedbackLink %>"><%= feedbackText %></a><a href="<%= href %>" target="_blank" class="caption"><%= caption %></a></div>')
 
 class Page
-  constructor: (@href, @weight, @src, @caption) ->
+  constructor: (o) ->
+    $.extend(this, o)
 
   insert: (container)->
     node = @node = $(pageTmpl(this)).addClass('newNode')
@@ -20,6 +21,8 @@ class Page
     if @weight isnt values.weight
       hasChanged = true
       @weight = values.weight
+    if @feedbackText isnt values.feedbackText
+      @node.find('.feedback').text(@feedbackText=values.feedbackText)
     hasChanged
 
   remove: ->
@@ -131,7 +134,7 @@ class Engine
 
     for href in newPages
       newPage = _.find(pages, (p)->p.href==href)
-      page = new Page(newPage.href, newPage.weight, newPage.src, newPage.caption)
+      page = new Page(newPage)
       page.insert(@container)
       @pages.push(page)
     
@@ -166,6 +169,8 @@ $( ->
         weight: link.weight
         src: link.image
         caption: link.title
+        feedbackLink: link.feedbackLink
+        feedbackText: link.feedbackText
       )
       engine.setPages(pages)
       $('body').removeClass('feedLoading')
