@@ -47,8 +47,14 @@ object Application extends Controller {
 
   def Json(a:JSONType) = Ok(a.toString()).as("application/json")
 
-  implicit def linkWithImageToJSONObject(lwi:LinkWithImage):JSONObject = new JSONObject(Map( "url" -> lwi.link.url, "weight" -> lwi.link.weight,
-    "title" -> lwi.link.title, "image" -> lwi.image.url ))
+  implicit def linkWithImageToJSONObject(lwi:LinkWithImage):JSONObject = new JSONObject(Map( 
+    "url" -> lwi.link.url,
+    "weight" -> lwi.link.weight,
+    "title" -> lwi.link.title,
+    "feedbackLink" -> lwi.link.feedbackLink,
+    "feedbackText" -> lwi.link.feedbackText,
+    "image" -> lwi.image.url
+  ))
 
   implicit def listToJSONArray(list:List[LinkWithImage]):JSONType = new JSONArray(list.map(linkWithImageToJSONObject(_)))
 
