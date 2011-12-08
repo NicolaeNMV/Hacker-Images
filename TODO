@@ -1,3 +1,6 @@
 * Create a LinksRetrieverStream from a LinksRetriever (-> actor)
+* Binding a Links accumulator to the LinksRetrieverStream (keep the latest state by accumulate all streamed event)
 * Binding WebSockets to the LinksRetrieverStream
 * Fix encoding
+* Add a timeline to navigate through time
+* Add other implementations of ImageExtractor and LinksRetriever ...
