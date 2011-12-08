@@ -2,6 +2,8 @@ package controllers
 
 import play.api._
 import play.api.mvc._
+import play.api.json._
+import play.api.json.Writes._
 
 import models._
 
@@ -20,9 +22,7 @@ case class LinkWithImage(link: Link, image: Image)
 
 object Application extends Controller {
 
-  val imageExtractorModes = Map("screenshot" -> ScreenshotExtractor
-    /*, "relevant" -> MostRelevantPageImageExtractor*/ // Disabled for now
-    )
+  val imageExtractorModes = Map("screenshot" -> ScreenshotExtractor) /*, "relevant" -> MostRelevantPageImageExtractor*/ // Disabled for now
   val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever)
 
   def index = Action { (request) =>
@@ -36,7 +36,7 @@ object Application extends Controller {
       getResult(linksRetriever, imageExtractor).extend(promise => {
         promise.value match {
           case Redeemed(links) => format match {
-            case "json" => Json(links)
+            case "json" => Ok( toJson(links) )
             case _ => Status(415)("Format Not Supported")
           }
         }
@@ -44,20 +44,18 @@ object Application extends Controller {
     )
   }
 
-
-  def Json(a:JSONType) = Ok(a.toString()).as("application/json")
-
-  implicit def linkWithImageToJSONObject(lwi:LinkWithImage):JSONObject = new JSONObject(Map( 
-    "url" -> lwi.link.url,
-    "weight" -> lwi.link.weight,
-    "title" -> lwi.link.title,
-    "feedbackLink" -> lwi.link.feedbackLink,
-    "feedbackText" -> lwi.link.feedbackText,
-    "image" -> lwi.image.url
-  ))
-
-  implicit def listToJSONArray(list:List[LinkWithImage]):JSONType = new JSONArray(list.map(linkWithImageToJSONObject(_)))
-
+  implicit def linkWithImageWrites : Writes[LinkWithImage] = new Writes[LinkWithImage] {
+    def writes(o: LinkWithImage):JsObject = {
+      JsObject(Map(
+      "url" -> JsString(o.link.url),
+      "weight" -> JsNumber(o.link.weight),
+      "title" -> JsString(o.link.title),
+      "feedbackLink" -> JsString(o.link.feedbackLink),
+      "feedbackText" -> JsString(o.link.feedbackText),
+      "image" -> JsString(o.image.url)
+    ))
+    }
+  }
 
   def getResult(linksRetriever:LinksRetriever, imageExtractor:ImageExtractor):Promise[List[LinkWithImage]] = {
     val links = linksRetriever.getLinks()
