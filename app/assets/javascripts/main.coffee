@@ -1,6 +1,12 @@
 
 window['console'] = {log: $.noop, debug: $.noop, error: $.noop} if !window['console']
 
+# RequestAnimationFrame polyfill : https://gist.github.com/997619
+requestAnimationFrame = `function(a,b){while(a--&&!(b=window["oR0msR0mozR0webkitR0r".split(0)[a]+"equestAnimationFrame"]));return b||function(a){setTimeout(a,15)}}(5)`
+
+# pub / sub custom events : https://gist.github.com/1000193
+Events = `(function(_){return{pub:function(a,b,c,d){for(d=-1,c=[].concat(_[a]);c[++d];)c[d](b)},sub:function(a,b){(_[a]||(_[a]=[])).push(b)}}})({})`
+
 pageTmpl = _.template('<div class="page"><img src="<%= src %>" /><a class="feedback" target="_blank" href="<%= feedbackLink %>"><%= feedbackText %></a><a href="<%= href %>" target="_blank" class="caption"><%= caption %></a></div>')
 
 class Page
@@ -156,8 +162,96 @@ class Engine
 
 
 
+class Timeline
+  lastUpdate: Date.now()
+  x: 0
+  nowArea: 30
+  nowColor: '#f00'
+  minWidthSeparation: 5
+  maxWidthSeparation: 100
+  scales: [
+    { ms: 1e4, unit: '10s', strokeStyle: '#666', lineWidth: 1, height: 5  },
+    { ms: 6e4, unit: '1mn', strokeStyle: '#000', lineWidth: 1, height: 5  },
+    { ms: 6e5, unit:'10mn', strokeStyle: '#000', lineWidth: 1, height: 10  },
+    { ms: 36e5, unit: '1h', strokeStyle: '#000', lineWidth: 2, height: 10  }
+  ]
+
+  constructor: (@node) ->
+    @canvas = @node.find('canvas')
+    @ctx = @canvas[0].getContext('2d')
+    @handle = @node.find('.handle')
+    $(window).resize(=>@updateSize())
+    @canvas.bind('mousemove',(e)  => @onMouseMove(e))
+    @canvas.bind('mouseup', (e) => @onMouseUp(e))
+    @canvas.bind('mousedown', (e) => @onMouseDown(e))
+    $(window).bind('mouseup', (e) => @dragging=null)
+
+  start: ->
+    @updateSize()
+    @nextRenderFrame()
+    @
+
+  setLastUpdate: (@lastUpdate) -> @
+
+  xToMs: (x)->
+    if x <= @nowArea
+      return 0
+    x -= @nowArea
+    x*1000
+    #1000*Math.min(x*60, Math.exp((x+100)/50))
+
+  setHandleX: (x) ->
+    ms = @xToMs(x)
+    today = Date.today()
+    d = @lastUpdate.addMilliseconds(-ms)
+    format = if today.compareTo(d)>0 then 'yyyy-MM-dd HH:mm:ss' else 'HH:mm:ss'
+    text = d.toString(format)
+    if ms is 0
+      text = "now ("+text+")"
+    if x < @nowArea
+      left = @nowArea/2
+    else
+      left = x
+    left -= 20
+    @handle.text(text)
+    @handle.css('left', left+'px')
+
+  onMouseDown: (e) ->
+    @dragging = { originalEvent: e }
+    @setHandleX e.clientX
+
+  onMouseUp: (e) ->
+    if @dragging
+      @setHandleX e.clientX
+      
+
+  onMouseMove: (e) ->
+    @setHandleX e.clientX
+    if @dragging
+      return
+      #todo
+
+  updateSize: ->
+    @canvas[0].width = window.innerWidth - 100
+
+  nextRenderFrame: ->
+    requestAnimationFrame (=> @render()), @canvas[0]
+
+  render: ->
+    @nextRenderFrame()
+    c = @ctx
+    w = @canvas[0].width
+    h = @canvas[0].height
+    c.fillStyle='white'
+    c.fillRect(0,0,w,h)
+    c.fillStyle=@nowColor
+    c.fillRect(0, 0, @nowArea, h)
+    c.fillStyle='black'
+    c.fillRect(0, @x, 1, h)
+
 $( -> 
 
+  timeline = new Timeline($('#timeline')).start()
   engine = new Engine($('#pages')).start()
 
   FEEDLOOPTIME = 8000; # 8s
@@ -173,6 +267,7 @@ $( ->
         feedbackText: link.feedbackText
       )
       engine.setPages(pages)
+      timeline.setLastUpdate(Date.now())
       $('body').removeClass('feedLoading')
       onFeeded and onFeeded()
   feedLoop = -> setTimeout((-> feedIt(feedLoop)), FEEDLOOPTIME)

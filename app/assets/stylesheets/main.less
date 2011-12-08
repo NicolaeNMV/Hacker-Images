@@ -1,3 +1,8 @@
+.unselectable() {
+   -moz-user-select: none;
+   -khtml-user-select: none;
+   user-select: none;
+}
 .box-sizing(@prop) {
   -webkit-box-sizing: @prop;
   -moz-box-sizing: @prop;
@@ -32,6 +37,13 @@
   transform: @prop;
 }
 
+.border-radius(@rad) {
+  border-radius: @rad;
+  -webkit-border-radius: @rad;
+  -moz-border-radius: @rad;
+  -o-border-radius: @rad;
+}
+
 html, body {
   background: #333;
   color: white;
@@ -45,20 +57,76 @@ body {
 #content {
   background: #333;
   min-height: 200px;
-  padding: 10px 0;
 }
 
+@handleBColor: #f60;
+@handleTriangle: 8px;
+@handleBorder: 2px;
+@handleTriangleBorder: 3px;
 header {
-  text-align: center;
+  #timeline {
+    height: 50px;
+    position: relative;
+    canvas {
+      cursor: pointer;
+    }
+    &:hover .handle {
+      opacity: 1;
+      .transition-duration(0s);
+    }
+    .handle {
+      opacity: 0;
+      .transition(.5s opacity);
+      z-index: 100;
+      background: @handleBColor;
+      position: absolute;
+      top: 30px+@handleTriangle;
+      padding: 2px 5px;
+      border: @handleBorder solid white;
+      .border-radius(4px);
+      .unselectable();
+      &:before {
+        content: ' ';
+        width: 0;
+        height: 0;
+        position: absolute;
+        top: -2*@handleTriangle;
+        left: @handleTriangle+@handleTriangleBorder;
+        border: @handleTriangle solid;
+        z-index: 91;
+        border-color: transparent transparent @handleBColor transparent;
+      }
+      &:after {
+        content: ' ';
+        width: 0;
+        height: 0;
+        position: absolute;
+        top: -2*(@handleTriangleBorder+@handleTriangle);
+        left: @handleTriangle;
+        border: @handleTriangleBorder+@handleTriangle solid;
+        z-index: 90;
+        border-color: transparent transparent white transparent;
+      }
+    }
+  }
+  hgroup {
+    background: black;
+    text-align: center;
+    white-space: nowrap;
+    padding: 10px;
+  }
   h1 {
-    font-size: 3em;
+    font-size: 2.2em;
     padding: 0;
     margin: 0;
     display: inline;
   }
   h2 {
+    font-size: 1.4em;
     padding: 0;
     margin: 0;
+    padding-left: 80px;
+    color: #aaa;
   }
   .hackernews {
     background: #ff6600;
@@ -68,7 +136,7 @@ header {
     font-size: 0.8em;
     font-weight: bold;
     font-family: Arial, sans-serif;
-    margin-right: 15px;
+    margin: 0 15px;
     vertical-align: middle;
     text-decoration: none;
   }
@@ -95,6 +163,8 @@ footer {
   text-align: center;
   padding: 5px 0 2px;
   background: rgba(0,0,0,0.9);
+  font-size: 0.8em;
+  white-space: nowrap;
   color: white;
   a {
     text-decoration: none;
