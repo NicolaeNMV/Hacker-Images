@@ -12,7 +12,7 @@ object ApplicationBuild extends Build {
       "org.jsoup" % "jsoup" % "1.6.1"
     )
 
-    val main = PlayProject(appName, appVersion, appDependencies).settings(defaultScalaSettings:_*).settings(
+    val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
       // Add your own project settings here      
     )
 
