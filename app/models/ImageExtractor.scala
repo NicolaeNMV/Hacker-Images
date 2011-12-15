@@ -31,8 +31,59 @@ object ScreenshotExtractor extends ImageExtractor {
   }
 }
 
+
+import akka.actor._
+import akka.actor.Actor._
+import play.api.libs.akka._
+import play.api.libs.iteratee._
+import play.api.libs.concurrent._
+import play.api.Play.current
+import sys.process._
+
+object LocalScreenshot {
+  val script = Play.getFile("phantomjs_scripts/render.js").getAbsolutePath
+  val outputDir = {
+    val f = Play.getFile("public/phantomjs_cache/")
+    f.mkdirs()
+    f.getAbsolutePath
+  }
+  val phantomjs = "phantomjs"
+
+  def pathForUrl(url:String) = outputDir+"/"+md5(url)+".png"
+  
+  def urlToImage(url:String) : Option[Image] = {
+    val output = pathForUrl(url)
+    Process(phantomjs+" "+script+" "+url+" "+output).run().exitValue() match {
+        case 0 => Some(Image(output))
+        case _ => None
+      }
+  }
+
+  def byteArrayToString(data: Array[Byte]) = {
+     val hash = new java.math.BigInteger(1, data).toString(16)
+     "0"*(32-hash.length) + hash
+  }
+  def md5(s: String):String = byteArrayToString(java.security.MessageDigest.getInstance("MD5").digest(s.getBytes("US-ASCII")));
+}
+
+class LocalScreenshotActor extends Actor {
+  def receive = {
+    case url: String =>
+      self reply LocalScreenshot.urlToImage(url)
+  }
+}
+
+object LocalScreenshotExtractor extends ImageExtractor {
+  val actor = actorOf[LocalScreenshotActor].start
+  def getImage(pageUrl: String): Promise[Option[Image]] = {
+    (actor ? pageUrl).mapTo[Option[Image]].asPromise
+  }
+}
+
+
 /**
  * Take the most relevant image from the page
+ * FIXME: it's currently bad implemented
  */
 object MostRelevantPageImageExtractor extends ImageExtractor {
   // TODO: move the cache to the controller side (top level)
