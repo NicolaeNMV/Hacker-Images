@@ -12,7 +12,7 @@ var height = parseInt(phantom.args[3] || 1024);
 
 renderUrlToFile(url, output, width, height, function(url, file){
   console.log("Rendered '"+url+"' at size ("+width+","+height+") into '"+output+"'");
-  phantom.exit();
+  phantom.exit(0);
 });
 
 setTimeout(function(){
@@ -25,11 +25,12 @@ function renderUrlToFile(url, file, width, height, callback) {
   var page = new WebPage();
   page.viewportSize = { width: width, height: height };
   page.clipRect = { top: 0, left: 0, width: width, height: height };
-  // page.settings.userAgent = "Phantom.js bot";
+  page.settings.userAgent = "Phantom.js bot";
 
   page.open(url, function(status){
     if(status !== "success") {
-      console.log("Unable to render '"+url+"'");
+      console.log("Unable to render '"+url+"' ("+status+")");
+      phantom.exit(3);
     } else {
       page.render(file);
       callback(url, file);
