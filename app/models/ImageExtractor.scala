@@ -3,12 +3,13 @@ package models
 import play.api._
 import play.api.libs.concurrent._
 import play.api.cache.BasicCache
+import play.api.Play.current
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes._
 
 import collection.JavaConversions._
-import java.net.URI
+import java.net._
 
 /**
  * An ImageTransformer transforms a web page link to a single image.
@@ -25,9 +26,33 @@ case class Image(url: String)
  * Screenshot implementation
  */
 object ScreenshotExtractor extends ImageExtractor {
-  val size = "1024x1024"
+  val wsBase = Play.configuration.getString("ws.screenshot").getOrElse("http://localhost:8999")
+  val format = "1024x1024"
+  val logger = Logger("ScreenshotExtractor")
+
+  private def encodeParameter(p:String) = URLEncoder.encode(p, "UTF-8")
+
   def getImage(pageUrl:String): Promise[Option[Image]] = {
-    Promise.pure(Some(Image("http://immediatenet.com/t/fs?Size="+size+"&URL="+pageUrl.replace("https://", "http://"))))
+    val url = wsBase+"/screenshot.jpg?url="+encodeParameter(pageUrl)+"&format="+format
+    WS.url(url).head().extend(_.value match {
+      case Redeemed(response) =>
+        response.status match {
+          case 200 =>
+            logger.debug("URL ready for "+url)
+            Some(Image(url))
+
+          case 202 =>
+            logger.debug("URL processing for "+url)
+            Some(Image(url))
+
+          case code =>
+            logger.debug("URL failed ("+code+") for "+url);
+            None
+        }
+      case Thrown(e) =>
+        logger.debug("URL failed ("+e+") for "+url)
+        None
+    })
   }
 }
 
