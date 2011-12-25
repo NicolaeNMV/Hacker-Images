@@ -1,6 +1,7 @@
 package models
 
 import play.api._
+import play.api.libs._
 import play.api.libs.concurrent._
 import play.api.cache.BasicCache
 import play.api.Play.current

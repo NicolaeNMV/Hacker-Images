@@ -2,6 +2,8 @@ package models
 
 import play.api._
 import play.api.libs.concurrent._
+import play.api.libs.json._
+import play.api.libs._
 import play.api.cache.BasicCache
 import play.api.Play.current
 
@@ -28,6 +30,44 @@ case class Link (
   feedbackText: String
 )
 
+case class RedditRetriever(path: String) extends LinksRetriever {
+  val url = "http://www.reddit.com"+path+".json"
+  val cache = new BasicCache()
+  val expirationSeconds = Play.configuration.getInt("cache.url.for.reddit.com").getOrElse(20)
+
+  def getLinks(): Promise[List[Link]] = {
+    cache.get[List[Link]](url).map(Promise.pure(_)).getOrElse({
+      WS.url(url).get().extend(_.value match {
+        case Redeemed(response) => {
+          val links = getLinksFromJson(response.body);
+          cache.set(url, links, expirationSeconds)
+          links
+        }
+        case Thrown(e:Exception) => {
+          Logger.error("Reddit "+url+" was unable to retrieved ("+e.getMessage()+")");
+          e.printStackTrace()
+          Nil
+        }
+      })
+    })
+  }
+
+  def getLinksFromJson(json: String) : List[Link] = {
+    Json.parse(json) \\ "data" collect(_ match {
+      case o:JsObject if (List("url", "title", "permalink", "ups", "num_comments").forall(o.value contains _)) => 
+        val m = o.value
+        Link(
+          m("url") match { case JsString(value) => value },
+          m("ups") match { case JsNumber(value) => value.doubleValue },
+          m("title") match { case JsString(value) => value },
+          "http://www.reddit.com" + (m("permalink") match { case JsString(value) => value }),
+          (m("num_comments") match { case JsNumber(value) => value.intValue })+" comments"
+        )
+    }) toList
+  }
+}
+object RedditRetriever extends RedditRetriever("/")
+
 /**
  * HackerNews implementation
  */
@@ -36,22 +76,21 @@ object HackerNewsRetriever extends LinksRetriever {
   val baseUrl = "http://news.ycombinator.com/news"
   // TODO: move the cache to the controller side (top level)
   val cache = new BasicCache()
-  val cacheKey = "models.HackerNewsRetriever.cacheKey"
   val expirationSeconds = Play.configuration.getInt("cache.url.for.news.ycombinator.com").getOrElse(10)
 
   def getLinks(): Promise[List[Link]] = {
-    cache.get[List[Link]](cacheKey).map(Promise.pure(_)).getOrElse({
+    cache.get[List[Link]](baseUrl).map(Promise.pure(_)).getOrElse({
       // TODO: reduce the code bellow, we should not care about exceptions (handle it on top level with play)
       WS.url(baseUrl).get().extend(promise => {
         promise.value match {
           case Redeemed(response) => {
             Logger.debug(baseUrl+" getted.");
             val links = getLinksFromHtml(response.body);
-            cache.set(cacheKey, links, expirationSeconds)
+            cache.set(baseUrl, links, expirationSeconds)
             links
           }
           case Thrown(e:Exception) => {
-            Logger.error("HackerNews unable to retrieved ("+e.getMessage()+")");
+            Logger.error("HackerNews was unable to retrieved ("+e.getMessage()+")");
             e.printStackTrace()
             Nil
           }

@@ -2,8 +2,8 @@ package controllers
 
 import play.api._
 import play.api.mvc._
-import play.api.json._
-import play.api.json.Writes._
+import play.api.libs.json._
+import play.api.libs.json.Writes._
 
 import models._
 
@@ -23,7 +23,7 @@ case class LinkWithImage(link: Link, image: Image)
 object Application extends Controller {
 
   val imageExtractorModes = Map("screenshot" -> ScreenshotExtractor) /*, "relevant" -> MostRelevantPageImageExtractor*/ // Disabled for now
-  val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever)
+  val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever, "reddit"->RedditRetriever)
 
   def index = Action { (request) =>
     Ok(views.html.index())
@@ -31,7 +31,7 @@ object Application extends Controller {
 
   def get(format:String) = Action { (request) =>
     val linksRetriever:LinksRetriever = request.queryString.get("service").flatMap(_.headOption).
-      flatMap(linksRetrieverModes.get(_)).getOrElse(HackerNewsRetriever)
+      flatMap(linksRetrieverModes.get(_)).getOrElse(RedditRetriever)
     val imageExtractor:ImageExtractor = request.queryString.get("image"  ).flatMap(_.headOption).
       flatMap(imageExtractorModes.get(_)).getOrElse(ScreenshotExtractor)
     AsyncResult(
