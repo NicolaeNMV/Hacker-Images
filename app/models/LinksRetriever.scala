@@ -3,6 +3,7 @@ package models
 import play.api._
 import play.api.libs.concurrent._
 import play.api.cache.BasicCache
+import play.api.Play.current
 
 import com.ning.http.client.Response
 
@@ -36,7 +37,7 @@ object HackerNewsRetriever extends LinksRetriever {
   // TODO: move the cache to the controller side (top level)
   val cache = new BasicCache()
   val cacheKey = "models.HackerNewsRetriever.cacheKey"
-  val expirationSeconds = 5
+  val expirationSeconds = Play.configuration.getInt("cache.url.for.news.ycombinator.com").getOrElse(10)
 
   def getLinks(): Promise[List[Link]] = {
     cache.get[List[Link]](cacheKey).map(Promise.pure(_)).getOrElse({
