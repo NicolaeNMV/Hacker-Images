@@ -26,12 +26,12 @@ object Application extends Controller {
   val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever, "reddit"->RedditRetriever)
 
   def index = Action { (request) =>
-    Ok(views.html.index())
+    Ok(views.html.index(imageExtractorModes, linksRetrieverModes))
   }
 
   def get(format:String) = Action { (request) =>
     val linksRetriever:LinksRetriever = request.queryString.get("service").flatMap(_.headOption).
-      flatMap(linksRetrieverModes.get(_)).getOrElse(RedditRetriever)
+      flatMap(linksRetrieverModes.get(_)).getOrElse(HackerNewsRetriever)
     val imageExtractor:ImageExtractor = request.queryString.get("image"  ).flatMap(_.headOption).
       flatMap(imageExtractorModes.get(_)).getOrElse(ScreenshotExtractor)
     AsyncResult(

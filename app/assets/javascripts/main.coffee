@@ -12,6 +12,8 @@ class Page
     img = new Image()
     img.onload = ->
       setTimeout((-> node.removeClass('newNode')), 500)
+    img.onerror = ->
+      setTimeout((-> node.removeClass('newNode')), 500)
     img.src = @src
     @node.appendTo(container)
     @

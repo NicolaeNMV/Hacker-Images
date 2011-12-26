@@ -34,7 +34,7 @@ object ScreenshotExtractor extends ImageExtractor {
   private def encodeParameter(p:String) = URLEncoder.encode(p, "UTF-8")
 
   def getImage(pageUrl:String): Promise[Option[Image]] = {
-    val url = wsBase+"/screenshot.jpg?url="+encodeParameter(pageUrl)+"&format="+format
+    val url = wsBase+"/screenshot.jpg?url="+encodeParameter(pageUrl)+"&size="+format
     WS.url(url).head().extend(_.value match {
       case Redeemed(response) =>
         response.status match {
