@@ -14,6 +14,8 @@ import org.jsoup.nodes._
 
 import collection.JavaConversions._
 import java.net.URI
+import java.util.Date
+import scala.xml._
 
 /**
  * A LinksRetriever retrieves a set of links and weights from any source.
@@ -30,21 +32,25 @@ case class Link (
   feedbackText: String
 )
 
-case class RedditRetriever(path: String) extends LinksRetriever {
-  val url = "http://www.reddit.com"+path+".json"
+object RedditRetriever {
   val cache = new BasicCache()
   val expirationSeconds = Play.configuration.getInt("cache.url.for.reddit.com").getOrElse(20)
+}
+case class RedditRetriever(path: String) extends LinksRetriever {
+  import RedditRetriever._
+
+  val url = "http://www.reddit.com"+path+".json"
 
   def getLinks(): Promise[List[Link]] = {
     cache.get[List[Link]](url).map(Promise.pure(_)).getOrElse({
       WS.url(url).get().extend(_.value match {
         case Redeemed(response) => {
-          val links = getLinksFromJson(response.body);
+          val links = getLinksFromJson(response.body)
           cache.set(url, links, expirationSeconds)
           links
         }
         case Thrown(e:Exception) => {
-          Logger.error("Reddit "+url+" was unable to retrieved ("+e.getMessage()+")");
+          Logger.error("Reddit "+url+" was unable to retrieved ("+e.getMessage+")")
           e.printStackTrace()
           Nil
         }
@@ -66,7 +72,63 @@ case class RedditRetriever(path: String) extends LinksRetriever {
     }) toList
   }
 }
-object RedditRetriever extends RedditRetriever("/")
+
+object RedditRootRetriever extends RedditRetriever("/")
+
+
+object RssRetriever {
+  val cache = new BasicCache()
+  val defaultExpiration = Play.configuration.getInt("cache.url.for.rss").getOrElse(60)
+}
+class RssRetriever(url: String) extends LinksRetriever {
+  import RssRetriever._
+  val domain = new URI(url).getHost
+  val expirationSeconds = Play.configuration.getInt("cache.url.for."+domain).getOrElse(defaultExpiration)
+
+  def getLinks(): Promise[List[Link]] = {
+    cache.get[List[Link]](url).map(Promise.pure(_)).getOrElse({
+      WS.url(url).get().extend(_.value match {
+        case Redeemed(response) => {
+          val links = getLinksFromRSS(response.xml)
+          cache.set(url, links, expirationSeconds)
+          links
+        }
+        case Thrown(e:Exception) => {
+          Logger.error("RSS "+url+" was unable to retrieved ("+e.getMessage+")")
+          e.printStackTrace()
+          Nil
+        }
+      })
+    })
+  }
+
+  def getLinksFromRSS(xml: Elem): List[Link] = {
+    val now = new Date().getTime
+    val linkAndMillis = xml \\ "rss" \ "channel" \ "item" map { item =>
+      val millisAgo = now - new Date((item \ "pubDate").text).getTime
+      val comments = (item \ "comments").text
+      val link = Link(
+        item \ "link" text,
+        1.0,
+        item \ "title" text,
+        comments,
+        if(comments.length>0) "Comments" else ""
+      )
+      (link, millisAgo)
+    } toList
+    val sumMillis = linkAndMillis.map(_._2).foldLeft (0L) ( (a, b) => (a+b) ).toDouble
+    val maxMillis = linkAndMillis.map(_._2).foldLeft (0L) ( (a, b) => Math.max(a, b) ).toDouble
+    linkAndMillis.map { tuple =>
+      val link = tuple._1
+      val millis = tuple._2.toDouble
+      link.copy(weight = (3600000.0+maxMillis-millis)/sumMillis)
+    }
+  }
+}
+
+object PlayFrameworkRssRetriever extends RssRetriever("http://www.playframework.org/community/planet.rss")
+
+object GoogleNewsRetriever extends RssRetriever("http://news.google.com/news?output=rss")
 
 /**
  * HackerNews implementation

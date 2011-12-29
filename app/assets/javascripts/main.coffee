@@ -86,10 +86,15 @@ class Engine
     weights = _(@pages).chain().map((b) -> b.weight)
     min = weights.min().value()
     max = weights.max().value()
-    for img in @pages
-      scaledValue = Math.floor (n-1)*(img.weight-min)/(max-min) # Scale weights to linear [0, n-1] int range
-      [w, h] = @scales[scaledValue]
-      img.setGridSize(w, h).setSize(@unitDim*w-@margin, @unitDim*h-@margin)
+    if min is max
+      [w, h] = @scales[Math.floor (n-1)/2]
+      for img in @pages
+        img.setGridSize(w, h).setSize(@unitDim*w-@margin, @unitDim*h-@margin)
+    else
+      for img in @pages
+        scaledValue = Math.floor (n-1)*(img.weight-min)/(max-min) # Scale weights to linear [0, n-1] int range
+        [w, h] = @scales[scaledValue]
+        img.setGridSize(w, h).setSize(@unitDim*w-@margin, @unitDim*h-@margin)
     @
 
   # Algorithm trying to distribute all images on the page into the best possible arrangement (fill the gaps).

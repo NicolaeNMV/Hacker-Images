@@ -23,12 +23,13 @@ case class LinkWithImage(link: Link, image: Image)
 object Application extends Controller {
 
   val imageExtractorModes = Map("screenshot" -> ScreenshotExtractor) /*, "relevant" -> MostRelevantPageImageExtractor*/ // Disabled for now
-  val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever, "reddit"->RedditRetriever)
+  val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever)
 
   def index = Action { (request) =>
     Ok(views.html.index(imageExtractorModes, linksRetrieverModes))
   }
 
+  // TODO : this method has been tested to be slow, need a top cache
   def get(format:String) = Action { (request) =>
     val linksRetriever:LinksRetriever = request.queryString.get("service").flatMap(_.headOption).
       flatMap(linksRetrieverModes.get(_)).getOrElse(HackerNewsRetriever)
