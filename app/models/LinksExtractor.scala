@@ -16,9 +16,9 @@ import java.util.Date
 import scala.xml._
 
 /*
- * A LinksRetriever retrieves a set of links and weights from a WS response.
+ * A LinksExtractor retrieves a set of links and weights from a WS response.
  */
-trait LinksRetriever {
+trait LinksExtractor {
   val url: String
   def getLinks(response: Response): List[Link]
   val cacheExpirationSeconds: Int
@@ -35,7 +35,7 @@ case class Link (
   feedbackText: String
 )
 
-case class RedditRetriever(path: String) extends LinksRetriever {
+case class RedditRetriever(path: String) extends LinksExtractor {
   val url = "http://www.reddit.com"+path+".json"
   val cacheExpirationSeconds = Play.configuration.getInt("cache.url.for.reddit.com").getOrElse(20)
   
@@ -57,7 +57,7 @@ case class RedditRetriever(path: String) extends LinksRetriever {
 
 object RedditRootRetriever extends RedditRetriever("/")
 
-case class RssRetriever(url: String) extends LinksRetriever {
+case class RssRetriever(url: String) extends LinksExtractor {
   val defaultExpiration = Play.configuration.getInt("cache.url.for.rss").getOrElse(60)
   val cacheExpirationSeconds = expirationFromDomain.getOrElse(defaultExpiration)
 
@@ -94,7 +94,7 @@ object GoogleNewsRetriever extends RssRetriever("http://news.google.com/news?out
 /**
  * HackerNews implementation
  */
-object HackerNewsRetriever extends LinksRetriever {
+object HackerNewsRetriever extends LinksExtractor {
   val url = "http://news.ycombinator.com/news"
   val cacheExpirationSeconds = Play.configuration.getInt("cache.url.for.news.ycombinator.com").getOrElse(10)
   

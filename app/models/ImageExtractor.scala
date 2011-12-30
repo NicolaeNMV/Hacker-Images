@@ -19,6 +19,7 @@ import java.net._
  */
 trait ImageExtractor {
   def getImage(pageUrl:String): Promise[Option[Image]]
+  val cacheExpirationSeconds: Int
 }
 
 case class Image(url: String)
@@ -27,6 +28,7 @@ case class Image(url: String)
  * Screenshot implementation
  */
 object ScreenshotExtractor extends ImageExtractor {
+  val cacheExpirationSeconds = 10
   val wsBase = Play.configuration.getString("ws.screenshot").getOrElse("http://localhost:8999")
   val format = "1024x1024"
   val logger = Logger("ScreenshotExtractor")
@@ -62,20 +64,14 @@ object ScreenshotExtractor extends ImageExtractor {
  * FIXME: it's currently bad implemented
  */
 object MostRelevantPageImageExtractor extends ImageExtractor {
-  // TODO: move the cache to the controller side (top level)
-  val cache = new BasicCache()
-  val expirationSeconds = 5*60
+  val cacheExpirationSeconds = 5*60
 
   def getImage(url:String): Promise[Option[Image]] = {
-    cache.get[Option[Image]](url).map(Promise.pure(_)).getOrElse({
-      Logger.debug("MostRelevantPageImageExtractor.getImageUrl("+url+")")
-      WS.url(url).get().map(html => {
-        val src = Jsoup.parse(html.body).select("img").headOption.map(
-          image => Image(new URI(url).resolve(image.attr("src")).toString())
-        )
-        cache.set(url, src)
-        src
-      })
+    Logger.debug("MostRelevantPageImageExtractor.getImageUrl("+url+")")
+    WS.url(url).get().map(html => {
+      Jsoup.parse(html.body).select("img").headOption.map(
+        image => Image(new URI(url).resolve(image.attr("src")).toString())
+      )
     })
   }
 }

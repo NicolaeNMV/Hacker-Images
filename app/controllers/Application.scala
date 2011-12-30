@@ -31,7 +31,7 @@ object Application extends Controller {
 
   // TODO : this method has been tested to be slow, need a top cache
   def get(format:String) = Action { (request) =>
-    val linksRetriever:LinksRetriever = request.queryString.get("service").flatMap(_.headOption).
+    val linksRetriever:LinksExtractor = request.queryString.get("service").flatMap(_.headOption).
       flatMap(linksRetrieverModes.get(_)).getOrElse(HackerNewsRetriever)
     val imageExtractor:ImageExtractor = request.queryString.get("image"  ).flatMap(_.headOption).
       flatMap(imageExtractorModes.get(_)).getOrElse(ScreenshotExtractor)
@@ -62,11 +62,13 @@ object Application extends Controller {
     list.foldLeft(Promise.pure(List[A]()))((s,p) => s.flatMap( s => p.map(a => s :+ a))) 
   }
 
-  def getResult(linksRetriever:LinksRetriever, imageExtractor:ImageExtractor):Promise[List[LinkWithImage]] = {
-    val links = UrlFetcher.fetch(linksRetriever)
+  def getResult(linksRetriever:LinksExtractor, imageExtractor:ImageExtractor):Promise[List[LinkWithImage]] = {
+    val links = LinksFetcher.fetch(linksRetriever)
     links.flatMap(links => {
       Logger.debug(links.length+" links found.");
-      val images = sequencePromises(links.map(link => imageExtractor.getImage(link.url).map( (link, _) )) ).map(_.flatMap(_ match {
+      val images = sequencePromises(links.map(link => 
+          ImageFetcher.fetch(link.url)(imageExtractor).map( (link, _) )
+        ) ).map(_.flatMap(_ match {
         case (link, Some(img)) => Some(LinkWithImage(link, img))
         case _ => None
       }))

@@ -8,15 +8,15 @@ import play.api.libs.concurrent._
 
 
 /**
- * UrlFetcher handle WS and cache for LinksRetriever
+ * LinksFetcher handle WS and cache for a LinksExtractor
  */
-object UrlFetcher {
-  // Fetch a LinksRetriever lazily (with cache)
-  def fetch(implicit r:LinksRetriever): Promise[List[Link]] =
-    cacheValue.map(Promise.pure(_)).getOrElse(retrieve(r))
+object LinksFetcher {
+  // Fetch a LinksExtractor lazily (with cache)
+  def fetch(implicit r:LinksExtractor): Promise[List[Link]] =
+    cacheValue.map(Promise.pure(_)).getOrElse(retrieve)
   
-  // Retrieve Links from a LinksRetriever (without cache)
-  def retrieve(implicit r: LinksRetriever) : Promise[List[Link]] = {
+  // Retrieve Links from a LinksExtractor (without cache)
+  def retrieve(implicit r: LinksExtractor) : Promise[List[Link]] = {
     WS.url(r.url).get().extend(_.value match {
       case Redeemed(response) => cacheValue(r.getLinks(response))
       case Thrown(e:Exception) => {
@@ -28,9 +28,9 @@ object UrlFetcher {
   }
 
   // Get a cache value
-  def cacheValue(implicit r:LinksRetriever): Option[List[Link]] = cache.get[List[Link]](r.url)
+  def cacheValue(implicit r:LinksExtractor): Option[List[Link]] = cache.get[List[Link]](r.url)
   // Set the cache value
-  def cacheValue(links:List[Link])(implicit r:LinksRetriever):List[Link] = {
+  def cacheValue(links:List[Link])(implicit r:LinksExtractor):List[Link] = {
     cache.set(r.url, links, r.cacheExpirationSeconds)
     links
   }
