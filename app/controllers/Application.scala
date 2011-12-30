@@ -63,7 +63,7 @@ object Application extends Controller {
   }
 
   def getResult(linksRetriever:LinksRetriever, imageExtractor:ImageExtractor):Promise[List[LinkWithImage]] = {
-    val links = linksRetriever.getLinks()
+    val links = UrlFetcher.fetch(linksRetriever)
     links.flatMap(links => {
       Logger.debug(links.length+" links found.");
       val images = sequencePromises(links.map(link => imageExtractor.getImage(link.url).map( (link, _) )) ).map(_.flatMap(_ match {

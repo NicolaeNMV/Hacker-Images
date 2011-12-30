@@ -4,10 +4,8 @@ import play.api._
 import play.api.libs.concurrent._
 import play.api.libs.json._
 import play.api.libs._
-import play.api.cache.BasicCache
+import play.api.libs.ws.Response
 import play.api.Play.current
-
-import com.ning.http.client.Response
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes._
@@ -17,11 +15,16 @@ import java.net.URI
 import java.util.Date
 import scala.xml._
 
-/**
- * A LinksRetriever retrieves a set of links and weights from any source.
+/*
+ * A LinksRetriever retrieves a set of links and weights from a WS response.
  */
 trait LinksRetriever {
-  def getLinks(): Promise[List[Link]]
+  val url: String
+  def getLinks(response: Response): List[Link]
+  val cacheExpirationSeconds: Int
+  
+  lazy val domain = new URI(url).getHost
+  lazy val expirationFromDomain = Play.configuration.getInt("cache.url.for."+domain)
 }
 
 case class Link (
@@ -32,33 +35,12 @@ case class Link (
   feedbackText: String
 )
 
-object RedditRetriever {
-  val cache = new BasicCache()
-  val expirationSeconds = Play.configuration.getInt("cache.url.for.reddit.com").getOrElse(20)
-}
 case class RedditRetriever(path: String) extends LinksRetriever {
-  import RedditRetriever._
-
   val url = "http://www.reddit.com"+path+".json"
-
-  def getLinks(): Promise[List[Link]] = {
-    cache.get[List[Link]](url).map(Promise.pure(_)).getOrElse({
-      WS.url(url).get().extend(_.value match {
-        case Redeemed(response) => {
-          val links = getLinksFromJson(response.body)
-          cache.set(url, links, expirationSeconds)
-          links
-        }
-        case Thrown(e:Exception) => {
-          Logger.error("Reddit "+url+" was unable to retrieved ("+e.getMessage+")")
-          e.printStackTrace()
-          Nil
-        }
-      })
-    })
-  }
-
-  def getLinksFromJson(json: String) : List[Link] = {
+  val cacheExpirationSeconds = Play.configuration.getInt("cache.url.for.reddit.com").getOrElse(20)
+  
+  def getLinks(r: Response) : List[Link] = {
+    val json = r.body
     Json.parse(json) \\ "data" collect(_ match {
       case o:JsObject if (List("url", "title", "permalink", "ups", "num_comments").forall(o.value contains _)) => 
         val m = o.value
@@ -75,34 +57,12 @@ case class RedditRetriever(path: String) extends LinksRetriever {
 
 object RedditRootRetriever extends RedditRetriever("/")
 
-
-object RssRetriever {
-  val cache = new BasicCache()
+case class RssRetriever(url: String) extends LinksRetriever {
   val defaultExpiration = Play.configuration.getInt("cache.url.for.rss").getOrElse(60)
-}
-class RssRetriever(url: String) extends LinksRetriever {
-  import RssRetriever._
-  val domain = new URI(url).getHost
-  val expirationSeconds = Play.configuration.getInt("cache.url.for."+domain).getOrElse(defaultExpiration)
+  val cacheExpirationSeconds = expirationFromDomain.getOrElse(defaultExpiration)
 
-  def getLinks(): Promise[List[Link]] = {
-    cache.get[List[Link]](url).map(Promise.pure(_)).getOrElse({
-      WS.url(url).get().extend(_.value match {
-        case Redeemed(response) => {
-          val links = getLinksFromRSS(response.xml)
-          cache.set(url, links, expirationSeconds)
-          links
-        }
-        case Thrown(e:Exception) => {
-          Logger.error("RSS "+url+" was unable to retrieved ("+e.getMessage+")")
-          e.printStackTrace()
-          Nil
-        }
-      })
-    })
-  }
-
-  def getLinksFromRSS(xml: Elem): List[Link] = {
+  def getLinks(response: Response): List[Link] = {
+    val xml = response.xml
     val now = new Date().getTime
     val linkAndMillis = xml \\ "rss" \ "channel" \ "item" map { item =>
       val millisAgo = now - new Date((item \ "pubDate").text).getTime
@@ -130,38 +90,17 @@ object PlayFrameworkRssRetriever extends RssRetriever("http://www.playframework.
 
 object GoogleNewsRetriever extends RssRetriever("http://news.google.com/news?output=rss")
 
+
 /**
  * HackerNews implementation
  */
 object HackerNewsRetriever extends LinksRetriever {
+  val url = "http://news.ycombinator.com/news"
+  val cacheExpirationSeconds = Play.configuration.getInt("cache.url.for.news.ycombinator.com").getOrElse(10)
   
-  val baseUrl = "http://news.ycombinator.com/news"
-  // TODO: move the cache to the controller side (top level)
-  val cache = new BasicCache()
-  val expirationSeconds = Play.configuration.getInt("cache.url.for.news.ycombinator.com").getOrElse(10)
-
-  def getLinks(): Promise[List[Link]] = {
-    cache.get[List[Link]](baseUrl).map(Promise.pure(_)).getOrElse({
-      // TODO: reduce the code bellow, we should not care about exceptions (handle it on top level with play)
-      WS.url(baseUrl).get().extend(promise => {
-        promise.value match {
-          case Redeemed(response) => {
-            Logger.debug(baseUrl+" getted.");
-            val links = getLinksFromHtml(response.body);
-            cache.set(baseUrl, links, expirationSeconds)
-            links
-          }
-          case Thrown(e:Exception) => {
-            Logger.error("HackerNews was unable to retrieved ("+e.getMessage()+")");
-            e.printStackTrace()
-            Nil
-          }
-        }
-      })
-    })
-  }
-
-  def getLinksFromHtml(html:String): List[Link] = {
+  // as you can see, HackerNews is damn hard to parse
+  def getLinks(r:Response): List[Link] = {
+    val html = r.body
     val doc = Jsoup.parse(html);
     val nodes = doc.select("td.title a[href^=http]:not([href$=.pdf])");
     nodes.map(element => {
@@ -172,7 +111,7 @@ object HackerNewsRetriever extends LinksRetriever {
       val itemText = aItem.map(_.text())
       val itemHref = aItem.flatMap(_.attributes.find(_.getKey=="href")).
                      map(_.getValue).
-                     map(new URI(baseUrl).resolve(_).toString())
+                    map(new URI(url).resolve(_).toString())
       val rankStr = tr.children().head.text().trim().dropRight(1)
       val pointsStr = tr2.select("td.subtext span").text().trim().takeWhile(_.isDigit)
       val rankPoints = if(rankStr.isEmpty) 0.0 else 2+nodes.length-rankStr.toDouble

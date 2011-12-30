@@ -8,12 +8,14 @@ class Page
     $.extend(this, o)
 
   insert: (container)->
+    self = this
     node = @node = $(pageTmpl(this)).addClass('newNode')
     img = new Image()
     img.onload = ->
       setTimeout((-> node.removeClass('newNode')), 500)
     img.onerror = ->
       setTimeout((-> node.removeClass('newNode')), 500)
+      self.loadError = true 
     img.src = @src
     @node.appendTo(container)
     @
@@ -26,6 +28,9 @@ class Page
     if @feedbackText isnt values.feedbackText
       @node.find('.feedback').text(@feedbackText=values.feedbackText)
     hasChanged
+
+  reload: ->
+    img.src = img.src
 
   remove: ->
     @node.addClass('removing')
@@ -153,6 +158,8 @@ class Engine
     for href in commonPages
       newPage = _.find(pages, (p)->p.href==href)
       page = _.find(@pages, (p)->p.href==href)
+      if page.loadError
+        page.reload()
       if page.update(newPage)
         somethingHasChanged = true
     
