@@ -30,35 +30,11 @@ case class NewsSource(
 
 object Sources {
   val staticSources = List(
-    NewsSource(
-      "hackernews",
-      HackerNewsRetriever, 
-      ScreenshotExtractor, 
-      "HackerNews Exposé",
-      """<a class="icon" style="background: #ff6600; color: white; border: 3px solid white; padding: 0px 6px; font-size: 0.8em; font-weight:
-      bold; font-family: Arial, sans-serif;" href="http://news.ycombinator.com/news" target="_blank">Y</a>"""
-    ),
-    NewsSource(
-      "reddit",
-      RedditRetriever("/"),
-      ScreenshotExtractor,
-      "Reddit Exposé",
-      ""
-    ),
-    NewsSource(
-      "googlenews",
-      RssRetriever("http://news.google.com/news?output=rss"),
-      ScreenshotExtractor,
-      "GoogleNews Exposé",
-      ""
-    ),
-    NewsSource(
-      "playframework",
-      RssRetriever("http://www.playframework.org/community/planet.rss"),
-      ScreenshotExtractor,
-      "PlayFramework Exposé",
-      ""
-    )
+    NewsSource("hackernews", HackerNewsRetriever("/news"), ScreenshotExtractor, "HackerNews Exposé", """<a class="icon" style="background: #ff6600; color: white; border: 3px solid white; padding: 0px 6px; font-size: 0.8em; font-weight:
+      bold; font-family: Arial, sans-serif;" href="http://news.ycombinator.com/news" target="_blank">Y</a>"""),
+    NewsSource("reddit", RedditRetriever("/"), ScreenshotExtractor, "Reddit Exposé", ""),
+    NewsSource("googlenews", RssRetriever("http://news.google.com/news?output=rss"), ScreenshotExtractor, "GoogleNews Exposé", ""),
+    NewsSource("playframework", RssRetriever("http://www.playframework.org/community/planet.rss"), ScreenshotExtractor, "PlayFramework Exposé", "")
   ) map { s => (s.id, s) } toMap
 
   val default = staticSources("hackernews")

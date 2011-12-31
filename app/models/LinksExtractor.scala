@@ -87,8 +87,8 @@ case class RssRetriever(url: String) extends LinksExtractor {
 /**
  * HackerNews implementation
  */
-object HackerNewsRetriever extends LinksExtractor {
-  val url = "http://news.ycombinator.com/news"
+case class HackerNewsRetriever(uri: String) extends LinksExtractor {
+  val url = "http://news.ycombinator.com"+uri
   val cacheExpirationSeconds = Play.configuration.getInt("cache.url.for.news.ycombinator.com").getOrElse(10)
   
   // as you can see, HackerNews is damn hard to parse
