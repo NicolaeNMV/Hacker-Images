@@ -20,23 +20,60 @@ import scala.util.parsing.json._
  */
 case class LinkWithImage(link: Link, image: Image)
 
-object Application extends Controller {
+case class NewsSource(
+  id: String,
+  linksExtractor: LinksExtractor, 
+  imageExtractor: ImageExtractor,
+  title: String, 
+  iconHtml: String
+)
 
-  val imageExtractorModes = Map("screenshot" -> ScreenshotExtractor) /*, "relevant" -> MostRelevantPageImageExtractor*/ // Disabled for now
-  val linksRetrieverModes = Map("hackernews" -> HackerNewsRetriever)
+object Application extends Controller {
+  
+  val sourcesList = List(
+    NewsSource(
+      "hackernews",
+      HackerNewsRetriever, 
+      ScreenshotExtractor, 
+      "HackerNews Exposé",
+      """<a class="icon" style="background: #ff6600; color: white; border: 3px solid white; padding: 0px 6px; font-size: 0.8em; font-weight:
+      bold; font-family: Arial, sans-serif;" href="http://news.ycombinator.com/news" target="_blank">Y</a>"""
+    ),
+    NewsSource(
+      "reddit",
+      RedditRootRetriever,
+      ScreenshotExtractor,
+      "Reddit Exposé",
+      ""
+    ),
+    NewsSource(
+      "googlenews",
+      GoogleNewsRetriever,
+      ScreenshotExtractor,
+      "GoogleNews Exposé",
+      ""
+    ),
+    NewsSource(
+      "playframework",
+      PlayFrameworkRssRetriever,
+      ScreenshotExtractor,
+      "PlayFramework Exposé",
+      ""
+    )
+  )
+  val sources = sourcesList map { s => (s.id, s) } toMap
+  val defaultSource = sources("hackernews")
 
   def index = Action { (request) =>
-    Ok(views.html.index(imageExtractorModes, linksRetrieverModes))
+    val source = request.queryString.get("source").flatMap(_.headOption).flatMap(sources.get(_)).getOrElse(defaultSource)
+    Ok(views.html.index(source))
   }
 
   // TODO : this method has been tested to be slow, need a top cache
   def get(format:String) = Action { (request) =>
-    val linksRetriever:LinksExtractor = request.queryString.get("service").flatMap(_.headOption).
-      flatMap(linksRetrieverModes.get(_)).getOrElse(HackerNewsRetriever)
-    val imageExtractor:ImageExtractor = request.queryString.get("image"  ).flatMap(_.headOption).
-      flatMap(imageExtractorModes.get(_)).getOrElse(ScreenshotExtractor)
+    val source = request.queryString.get("source").flatMap(_.headOption).flatMap(sources.get(_)).getOrElse(defaultSource)
     AsyncResult(
-      getResult(linksRetriever, imageExtractor).extend(promise => {
+      getResult(source).extend(promise => {
         promise.value match {
           case Redeemed(links) => format match {
             case "json" => Ok( toJson(links) )
@@ -62,12 +99,12 @@ object Application extends Controller {
     list.foldLeft(Promise.pure(List[A]()))((s,p) => s.flatMap( s => p.map(a => s :+ a))) 
   }
 
-  def getResult(linksRetriever:LinksExtractor, imageExtractor:ImageExtractor):Promise[List[LinkWithImage]] = {
-    val links = LinksFetcher.fetch(linksRetriever)
+  def getResult(source: NewsSource) : Promise[List[LinkWithImage]] = {
+    val links = LinksFetcher.fetch(source.linksExtractor)
     links.flatMap(links => {
       Logger.debug(links.length+" links found.");
       val images = sequencePromises(links.map(link => 
-          ImageFetcher.fetch(link.url)(imageExtractor).map( (link, _) )
+          ImageFetcher.fetch(link.url)(source.imageExtractor).map( (link, _) )
         ) ).map(_.flatMap(_ match {
         case (link, Some(img)) => Some(LinkWithImage(link, img))
         case _ => None

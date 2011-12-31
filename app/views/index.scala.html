@@ -1,18 +1,18 @@
-@(imageExtractorModes: Map[String, models.ImageExtractor], linksExtractorModes: Map[String, models.LinksExtractor])
+@(source: NewsSource)
 
-@main("HackerNews Exposé - renew the way you preview news") {
+@main(source.title+" - renew the way you preview news") {
+<script type="text/javascript">
+  NEWS_SOURCE = "@source.id";
+</script>
 <header>
   <hgroup>
-    <h1>
-      <a class="hackernews" href="http://news.ycombinator.com/news" target="_blank">Y</a>
-      HackerNews Exposé
-    </h1>
+    <h1>@Html(source.iconHtml) @source.title</h1>
     <h2>renew the way you preview news</h2>
   </hgroup>
 </header>
 
 <div id="pages"></div>
 
-<footer>HackerNews Exposé is a <a href="http://playexperiments.com/experiment/2">Play! Experiments</a>, made by <a href="http://gaetanrenaudeau.fr" rel="author">Gaëtan Renaudeau</a> and <a href="http://github.com/adrenalinup" rel="author">Nicolae Namolovan</a>. see <a href="http://github.com/adrenalinup/Hacker-Images">source code</a></footer>
+<footer>News Exposé is a <a href="http://playexperiments.com/experiment/2">Play! Experiments</a>, made by <a href="http://gaetanrenaudeau.fr" rel="author">Gaëtan Renaudeau</a> and <a href="http://github.com/adrenalinup" rel="author">Nicolae Namolovan</a>. see <a href="http://github.com/adrenalinup/Hacker-Images">source code</a></footer>
 }
 
