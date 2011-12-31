@@ -4,6 +4,19 @@
   box-sizing: @prop;
 }
 
+.unselectable() {
+   -moz-user-select: none;
+   -khtml-user-select: none;
+   user-select: none;
+}
+
+.border-radius(@rad) {
+  border-radius: @rad;
+  -webkit-border-radius: @rad;
+  -moz-border-radius: @rad;
+  -o-border-radius: @rad;
+}
+
 .transition(@prop) {
   -webkit-transition: @prop;
   -moz-transition: @prop;
@@ -45,20 +58,27 @@ body {
 #content {
   background: #333;
   min-height: 200px;
-  padding: 10px 0;
 }
 
 header {
-  text-align: center;
+  hgroup {
+    background: black;
+    text-align: center;
+    white-space: nowrap;
+    padding: 10px;
+  }
   h1 {
-    font-size: 3em;
+    font-size: 2.2em;
     padding: 0;
     margin: 0;
     display: inline;
   }
   h2 {
+    font-size: 1.4em;
     padding: 0;
     margin: 0;
+    padding-left: 80px;
+    color: #aaa;
   }
   .hackernews {
     background: #ff6600;
@@ -68,7 +88,7 @@ header {
     font-size: 0.8em;
     font-weight: bold;
     font-family: Arial, sans-serif;
-    margin-right: 15px;
+    margin: 0 15px;
     vertical-align: middle;
     text-decoration: none;
   }
@@ -96,6 +116,8 @@ footer {
   padding: 5px 0 2px;
   background: rgba(0,0,0,0.9);
   color: white;
+  font-size: 0.8em;
+  white-space: nowrap;
   a {
     text-decoration: none;
     color: #f90;
