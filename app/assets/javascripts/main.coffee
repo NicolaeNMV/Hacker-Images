@@ -49,6 +49,13 @@ class Page
     @node.width(w).height(h)
     @
 
+  expand: ->
+    @node.addClass('expanded')
+    @
+  unexpand: ->
+    @node.removeClass('expanded')
+    @
+
 class Engine
   constructor: (@container, @unitDim = 100, @margin = 10) -> 
     @scales = [
@@ -134,6 +141,14 @@ class Engine
       obj.box.setPosition(@unitDim*obj.position[0], @unitDim*obj.position[1]).setFontSize((0.2+obj.box.w*0.6)+'em') 
     @
 
+  expandAll: ->
+    _.each(@pages, (p) -> p.expand())
+    @
+
+  unexpandAll: ->
+    _.each(@pages, (p) -> p.unexpand())
+    @
+
   # Usage: setPages( [ { href: "http://greweb.fr/", weight: 0.15, img: "http://greweb.fr/image.png", caption: "my awesome blog" }, ... ] )
   setPages: (pages) ->
     currentHref = _.map(@pages, (box) -> box.href)
@@ -143,7 +158,6 @@ class Engine
     removedPages = _.difference(currentHref, pagesHref)
     
     somethingHasChanged = newPages.length > 0 || removedPages.length > 0
-
     for href in newPages
       newPage = _.find(pages, (p)->p.href==href)
       page = new Page(newPage)
@@ -170,9 +184,15 @@ class Engine
 
 
 
-$( -> 
-
+$( ->
   engine = new Engine($('#pages')).start()
+
+  $(window).bind 'keyup keydown', (e) ->
+    if(e.metaKey || e.ctrlKey)
+      engine.expandAll()
+    else
+      engine.unexpandAll()
+  
 
   FEEDLOOPTIME = 8000; # 8s
   feedIt = (onFeeded) ->
