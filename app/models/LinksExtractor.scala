@@ -55,8 +55,6 @@ case class RedditRetriever(path: String) extends LinksExtractor {
   }
 }
 
-object RedditRootRetriever extends RedditRetriever("/")
-
 case class RssRetriever(url: String) extends LinksExtractor {
   val defaultExpiration = Play.configuration.getInt("cache.url.for.rss").getOrElse(60)
   val cacheExpirationSeconds = expirationFromDomain.getOrElse(defaultExpiration)
@@ -85,11 +83,6 @@ case class RssRetriever(url: String) extends LinksExtractor {
     }
   }
 }
-
-object PlayFrameworkRssRetriever extends RssRetriever("http://www.playframework.org/community/planet.rss")
-
-object GoogleNewsRetriever extends RssRetriever("http://news.google.com/news?output=rss")
-
 
 /**
  * HackerNews implementation

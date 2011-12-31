@@ -28,9 +28,8 @@ case class NewsSource(
   iconHtml: String
 )
 
-object Application extends Controller {
-  
-  val sourcesList = List(
+object Sources {
+  val staticSources = List(
     NewsSource(
       "hackernews",
       HackerNewsRetriever, 
@@ -41,37 +40,50 @@ object Application extends Controller {
     ),
     NewsSource(
       "reddit",
-      RedditRootRetriever,
+      RedditRetriever("/"),
       ScreenshotExtractor,
       "Reddit Exposé",
       ""
     ),
     NewsSource(
       "googlenews",
-      GoogleNewsRetriever,
+      RssRetriever("http://news.google.com/news?output=rss"),
       ScreenshotExtractor,
       "GoogleNews Exposé",
       ""
     ),
     NewsSource(
       "playframework",
-      PlayFrameworkRssRetriever,
+      RssRetriever("http://www.playframework.org/community/planet.rss"),
       ScreenshotExtractor,
       "PlayFramework Exposé",
       ""
     )
-  )
-  val sources = sourcesList map { s => (s.id, s) } toMap
-  val defaultSource = sources("hackernews")
+  ) map { s => (s.id, s) } toMap
 
+  val default = staticSources("hackernews")
+
+  def getSourceFromRequest(request: Request[_]): Option[NewsSource] =
+    request.queryString.get("source").flatMap(_.headOption).flatMap(_ match {
+      case "rss" =>
+        request.queryString.get("url").flatMap(_.headOption).map( url =>
+          Some(NewsSource("rss", RssRetriever(url), ScreenshotExtractor, "RSS Exposé", ""))
+        ).getOrElse(None)
+      case source if(staticSources contains source) => 
+        Some(staticSources(source))
+    })
+}
+
+object Application extends Controller {
+  
   def index = Action { (request) =>
-    val source = request.queryString.get("source").flatMap(_.headOption).flatMap(sources.get(_)).getOrElse(defaultSource)
+    val source = Sources.getSourceFromRequest(request).getOrElse(Sources.default)
     Ok(views.html.index(source))
   }
 
   // TODO : this method has been tested to be slow, need a top cache
   def get(format:String) = Action { (request) =>
-    val source = request.queryString.get("source").flatMap(_.headOption).flatMap(sources.get(_)).getOrElse(defaultSource)
+    val source = Sources.getSourceFromRequest(request).getOrElse(Sources.default)
     AsyncResult(
       getResult(source).extend(promise => {
         promise.value match {
