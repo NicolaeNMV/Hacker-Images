@@ -2,7 +2,7 @@ package utils
 
 import play.api.libs.concurrent._
 
-object `package`{
+object `package` {
   implicit def listToPromiseSequencableList[A](list: List[Promise[A]]) = new PromiseSequencableList[A](list)
 }
 
