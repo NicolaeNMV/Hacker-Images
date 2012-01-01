@@ -22,23 +22,23 @@ trait LinksExtractor {
   val url: String
   def getLinks(response: Response): List[Link]
   val cacheExpirationSeconds: Int
-  
+
   lazy val domain = new URI(url).getHost
   lazy val expirationFromDomain = Play.configuration.getInt("cache.url.for."+domain)
 }
 
 case class Link (
-  url: String, 
-  weight: Double, 
-  title: String, 
-  feedbackLink: String, 
+  url: String,
+  weight: Double,
+  title: String,
+  feedbackLink: String,
   feedbackText: String
 )
 
 case class RedditRetriever(path: String) extends LinksExtractor {
   val url = "http://www.reddit.com"+path+".json"
   val cacheExpirationSeconds = Play.configuration.getInt("cache.url.for.reddit.com").getOrElse(20)
-  
+
   def getLinks(r: Response) : List[Link] = {
     val json = r.body
     Json.parse(json) \\ "data" collect(_ match {
@@ -81,7 +81,7 @@ case class RssRetriever(url: String) extends LinksExtractor {
 case class HackerNewsRetriever(uri: String) extends LinksExtractor {
   val url = "http://news.ycombinator.com"+uri
   val cacheExpirationSeconds = Play.configuration.getInt("cache.url.for.news.ycombinator.com").getOrElse(10)
-  
+
   // as you can see, HackerNews is damn hard to parse
   def getLinks(r:Response): List[Link] = {
     val html = r.body

@@ -5,6 +5,7 @@ import play.api.mvc._
 import play.api.libs.json._
 import play.api.libs.json.Writes._
 
+import utils._
 import models._
 
 import org.jsoup.Jsoup
@@ -57,7 +58,6 @@ object Application extends Controller {
     Ok(views.html.index(source))
   }
 
-  // TODO : this method has been tested to be slow, need a top cache
   def get(format:String) = Action { (request) =>
     val source = Sources.getSourceFromRequest(request).getOrElse(Sources.default)
     AsyncResult(
@@ -83,17 +83,12 @@ object Application extends Controller {
     ))
   }
 
-  def sequencePromises[A](list: List[Promise[A]]): Promise[List[A]] = {
-    list.foldLeft(Promise.pure(List[A]()))((s,p) => s.flatMap( s => p.map(a => s :+ a))) 
-  }
-
   def getResult(source: NewsSource) : Promise[List[LinkWithImage]] = {
-    val links = LinksFetcher.fetch(source.linksExtractor)
-    links.flatMap(links => {
+    LinksFetcher.fetch(source.linksExtractor).flatMap(links => {
       Logger.debug(links.length+" links found.");
-      val images = sequencePromises(links.map(link => 
+      val images = links.map(link => 
           ImageFetcher.fetch(link.url)(source.imageExtractor).map( (link, _) )
-        ) ).map(_.flatMap(_ match {
+        ).sequence.map(_.flatMap(_ match {
         case (link, Some(img)) => Some(LinkWithImage(link, img))
         case _ => None
       }))
