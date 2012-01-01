@@ -60,27 +60,18 @@ case class RssRetriever(url: String) extends LinksExtractor {
   val cacheExpirationSeconds = expirationFromDomain.getOrElse(defaultExpiration)
 
   def getLinks(response: Response): List[Link] = {
-    val xml = response.xml
-    val now = new Date().getTime
-    val linkAndMillis = xml \\ "rss" \ "channel" \ "item" map { item =>
-      val millisAgo = now - new Date((item \ "pubDate").text).getTime
+    var i = 0.0
+    (response.xml \\ "rss" \ "channel" \ "item").toList.reverse map { item =>
       val comments = (item \ "comments").text
-      val link = Link(
+      i += 1.0
+      Link(
         item \ "link" text,
-        1.0,
+        i*i,
         item \ "title" text,
         comments,
         if(comments.length>0) "Comments" else ""
       )
-      (link, millisAgo)
-    } toList
-    val sumMillis = linkAndMillis.map(_._2).foldLeft (0L) ( (a, b) => (a+b) ).toDouble
-    val maxMillis = linkAndMillis.map(_._2).foldLeft (0L) ( (a, b) => Math.max(a, b) ).toDouble
-    linkAndMillis.map { tuple =>
-      val link = tuple._1
-      val millis = tuple._2.toDouble
-      link.copy(weight = (3600000.0+maxMillis-millis)/sumMillis)
-    }
+    } reverse
   }
 }
 
