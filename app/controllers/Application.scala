@@ -88,13 +88,13 @@ object Application extends Controller {
   }
 
   implicit def linkWithImageWrites: Writes[LinkWithImage] = new Writes[LinkWithImage] {
-    def writes(o: LinkWithImage) = JsObject(Map(
-      "url" -> JsString(o.link.url),
-      "weight" -> JsNumber(o.link.weight),
-      "title" -> JsString(o.link.title),
-      "feedbackLink" -> JsString(o.link.feedbackLink),
-      "feedbackText" -> JsString(o.link.feedbackText),
-      "image" -> JsString(o.image.url)
+    def writes(o: LinkWithImage) = JsObject(List(
+      ("url" -> JsString(o.link.url)),
+      ("weight" -> JsNumber(o.link.weight)),
+      ("title" -> JsString(o.link.title)),
+      ("feedbackLink" -> JsString(o.link.feedbackLink)),
+      ("feedbackText" -> JsString(o.link.feedbackText)),
+      ("image" -> JsString(o.image.url))
     ))
   }
 
