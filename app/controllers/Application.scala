@@ -24,18 +24,20 @@ case class LinkWithImage(link: Link, image: Image)
 case class NewsSource(
   id: String,
   linksExtractor: LinksExtractor, 
-  imageExtractor: ImageExtractor,
-  title: String, 
-  iconHtml: String
-)
+  imageExtractor: ImageExtractor) {
+  lazy val jsonURI = linksExtractor match {
+    case RssRetriever(url) => "/current.json?source="+id+"&url="+url
+    case _ => "/current.json?source="+id
+  }
+  lazy val titleHtml = views.html.title(this)
+}
 
 object Sources {
   val staticSourcesList = List(
-    NewsSource("hackernews", HackerNewsRetriever("/news"), ScreenshotExtractor, "HackerNews Exposé", """<a class="icon" style="background: #ff6600; color: white; border: 3px solid white; padding: 0px 6px; font-size: 0.8em; font-weight:
-      bold; font-family: Arial, sans-serif;" href="http://news.ycombinator.com/news" target="_blank">Y</a>"""),
-    NewsSource("reddit", RedditRetriever("/"), ScreenshotExtractor, "Reddit Exposé", ""),
-    NewsSource("googlenews", RssRetriever("http://news.google.com/news?output=rss"), ScreenshotExtractor, "GoogleNews Exposé", ""),
-    NewsSource("playframework", RssRetriever("http://www.playframework.org/community/planet.rss"), ScreenshotExtractor, "PlayFramework Exposé", "")
+    NewsSource("hackernews", HackerNewsRetriever("/news"), ScreenshotExtractor),
+    NewsSource("reddit", RedditRetriever("/"), ScreenshotExtractor),
+    NewsSource("googlenews", RssRetriever("http://news.google.com/news?output=rss"), ScreenshotExtractor),
+    NewsSource("playframework", RssRetriever("http://www.playframework.org/community/planet.rss"), ScreenshotExtractor)
   )
   val staticSources = staticSourcesList map { s => (s.id, s) } toMap
 
@@ -45,7 +47,7 @@ object Sources {
     request.queryString.get("source").flatMap(_.headOption).flatMap(_ match {
       case "rss" =>
         request.queryString.get("url").flatMap(_.headOption).map( url =>
-          Some(NewsSource("rss", RssRetriever(url), ScreenshotExtractor, "RSS Exposé", ""))
+          Some(NewsSource("rss", RssRetriever(url), ScreenshotExtractor))
         ).getOrElse(None)
       case source if(staticSources contains source) => 
         Some(staticSources(source))
@@ -59,7 +61,7 @@ object Application extends Controller {
     Ok(views.html.index(source))
   }
 
-  def get(format:String) = Action { (request) =>
+  def get(format: String) = Action { (request) =>
     val source = Sources.getSourceFromRequest(request).getOrElse(Sources.default)
     AsyncResult(
       getResult(source).extend(promise => {
@@ -73,7 +75,7 @@ object Application extends Controller {
     )
   }
 
-  implicit def linkWithImageWrites : Writes[LinkWithImage] = new Writes[LinkWithImage] {
+  implicit def linkWithImageWrites: Writes[LinkWithImage] = new Writes[LinkWithImage] {
     def writes(o: LinkWithImage) = JsObject(Map(
       "url" -> JsString(o.link.url),
       "weight" -> JsNumber(o.link.weight),
@@ -84,7 +86,7 @@ object Application extends Controller {
     ))
   }
 
-  def getResult(source: NewsSource) : Promise[List[LinkWithImage]] = {
+  def getResult(source: NewsSource): Promise[List[LinkWithImage]] = {
     LinksFetcher.fetch(source.linksExtractor).flatMap(links => {
       Logger.debug(links.length+" links found.");
       val images = links.map(link => 

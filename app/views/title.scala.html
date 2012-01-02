@@ -1,0 +1,30 @@
+@(source: NewsSource)
+
+@import models._
+@import play.api.mvc._
+
+@(source.linksExtractor match {
+
+  case HackerNewsRetriever(url) => Html("""
+    <a class="icon" style="background: #ff6600; color: white; border: 3px solid white; padding: 0px 6px; font-size: 0.8em; font-weight:
+        bold; font-family: Arial, sans-serif;" href=""""+url+"""" target="_blank">Y</a> HackerNews Exposé
+  """)
+
+  case RedditRetriever(url) => Html("""
+    <a class="icon" href=""""+url+"""" target="_blank"><img alt="reddit" src="/assets/images/reddit.png" /></a> Reddit Exposé
+  """)
+
+  case r @ RssRetriever(url) => Html("""
+  <a class="icon" href=""""+url+"""" target="_blank">
+    <img src="/assets/images/rss.png" alt="RSS" />
+  </a> """+r.domain+""" Exposé
+  """)
+
+  case _ => Html(
+  """
+    <a class="icon" style="background: #ccc; color: white; border: 3px solid white; padding: 0px 6px; font-size: 0.8em; font-weight:
+        bold; font-family: Arial, sans-serif;" href="http://news.ycombinator.com/news" target="_blank">N</a> News Exposé
+  """)
+})
+
+

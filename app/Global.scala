@@ -35,7 +35,7 @@ class LinksFetchScheduler extends Actor {
 class LinksFetch extends Actor {
   def receive = {
     case source:NewsSource => 
-      Logger.debug("LinksFetch "+source)
+      Logger("LinksFetch").debug("fetching "+source)
       LinksFetcher.fetch(source.linksExtractor).map(_.map(link => ImageFetcher.fetch(link.url)(source.imageExtractor)))
   }
 }

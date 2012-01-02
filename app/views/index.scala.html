@@ -1,12 +1,12 @@
 @(source: NewsSource)
 
-@main(source.title+" - renew the way you preview news") {
+@main("News Exposé - renew the way you preview news") {
 <script type="text/javascript">
-  NEWS_SOURCE = "@source.id";
+  NEWS_JSON_URI = "@Html(source.jsonURI)";
 </script>
 <header>
   <hgroup>
-    <h1>@Html(source.iconHtml) @source.title</h1>
+    <h1>@source.titleHtml</h1>
     <h2>renew the way you preview news</h2>
   </hgroup>
 </header>
