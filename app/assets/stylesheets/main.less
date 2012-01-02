@@ -87,6 +87,13 @@ header {
   }
 }
 
+body .errorLoading {
+  display: none;
+}
+body.errorLoading .errorLoading {
+  display: block;
+}
+
 body.feedLoading {
   .icon {
     -webkit-animation: loading 1s infinite;
@@ -116,6 +123,15 @@ footer {
     color: #f90;
   }
 }
+
+div.errorLoading {
+  color: #f33;
+  text-align: center;
+  padding: 5px;
+  font-size: 1.2em;
+  font-family: monospace;
+}
+
 #pages {
   position: relative;
   width: 100%;

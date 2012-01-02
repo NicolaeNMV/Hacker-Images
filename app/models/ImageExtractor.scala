@@ -11,6 +11,7 @@ import org.jsoup.nodes._
 
 import collection.JavaConversions._
 import java.net._
+import scala.util.matching._
 
 /**
  * An ImageTransformer transforms a web page link to a single image.
@@ -18,16 +19,32 @@ import java.net._
  * a real image taken from the page, or anything else.
  */
 trait ImageExtractor {
-  def getImage(pageUrl:String): Promise[Option[Image]]
   val cacheExpirationSeconds: Int
+  def getImage(pageUrl: String): Promise[Option[Image]]
 }
 
 case class Image(url: String)
 
+trait ImageOrElseExtractor extends ImageExtractor {
+  val cacheExpirationSeconds: Int
+  def getImage(pageUrl: String): Promise[Option[Image]] = {
+    Promise.pure(
+      try {
+        if (new Regex("(gif|png|jpg|jpeg)$").findFirstIn(new URI(pageUrl).getPath).isDefined)
+          Some(Image(pageUrl))
+        else 
+          None
+      } catch {
+        case _ => None
+      }
+    )
+  }
+}
+
 /**
  * Screenshot implementation
  */
-object ScreenshotExtractor extends ImageExtractor {
+object ScreenshotExtractor extends ImageOrElseExtractor {
   val cacheExpirationSeconds = 10
   val wsBase = Play.configuration.getString("ws.screenshot").getOrElse("http://localhost:8999")
   val format = "1024x1024"
@@ -35,26 +52,28 @@ object ScreenshotExtractor extends ImageExtractor {
 
   private def encodeParameter(p:String) = URLEncoder.encode(p, "UTF-8")
 
-  def getImage(pageUrl:String): Promise[Option[Image]] = {
-    val url = wsBase+"/screenshot.jpg?url="+encodeParameter(pageUrl)+"&size="+format
-    WS.url(url).head().extend(_.value match {
-      case Redeemed(response) =>
-        response.status match {
-          case 200 =>
-            logger.debug("URL ready for "+url)
-            Some(Image(url))
+  override def getImage(pageUrl: String): Promise[Option[Image]] = {
+    super.getImage(pageUrl).flatMap(o => if (o.isDefined) Promise.pure(o) else {
+      val url = wsBase+"/screenshot.jpg?url="+encodeParameter(pageUrl)+"&size="+format
+      WS.url(url).head().extend(_.value match {
+        case Redeemed(response) =>
+          response.status match {
+            case 200 =>
+              logger.debug("URL ready for "+url)
+              Some(Image(url))
 
-          case 202 =>
-            logger.debug("URL processing for "+url)
-            Some(Image(url))
+            case 202 =>
+              logger.debug("URL processing for "+url)
+              Some(Image(url))
 
-          case code =>
-            logger.debug("URL failed ("+code+") for "+url);
-            None
-        }
-      case Thrown(e) =>
-        logger.debug("URL failed ("+e+") for "+url)
-        None
+            case code =>
+              logger.debug("URL failed ("+code+") for "+url);
+              None
+          }
+        case Thrown(e) =>
+          logger.debug("URL failed ("+e+") for "+url)
+          None
+      })
     })
   }
 }

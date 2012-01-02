@@ -25,6 +25,8 @@ trait LinksExtractor {
 
   lazy val domain = new URI(url).getHost
   lazy val expirationFromDomain = Play.configuration.getInt("cache.url.for."+domain)
+
+  override def toString = url
 }
 
 case class Link (
@@ -45,14 +47,16 @@ case class RedditRetriever(path: String) extends LinksExtractor {
       case o:JsObject if (List("url", "title", "permalink", "ups", "num_comments").forall(o.value contains _)) => 
         val m = o.value
         Link(
-          m("url") match { case JsString(value) => value },
-          m("ups") match { case JsNumber(value) => value.doubleValue },
-          m("title") match { case JsString(value) => value },
-          "http://www.reddit.com" + (m("permalink") match { case JsString(value) => value }),
-          (m("num_comments") match { case JsNumber(value) => value.intValue })+" comments"
+          m("url") match { case JsString(value) => value; case _ => "" },
+          m("ups") match { case JsNumber(value) => value.doubleValue; case _ => 1.0  },
+          m("title") match { case JsString(value) => value; case _ => ""  },
+          "http://www.reddit.com" + (m("permalink") match { case JsString(value) => value; case _ => ""  }),
+          (m("num_comments") match { case JsNumber(value) => value.intValue; case _ => "" })+" comments"
         )
     }) toList
   }
+
+  override def toString = "Reddit"+(if(path=="/") "" else path)
 }
 
 case class RssRetriever(url: String) extends LinksExtractor {
@@ -73,6 +77,8 @@ case class RssRetriever(url: String) extends LinksExtractor {
       )
     } reverse
   }
+
+  override def toString = "RSS at "+url
 }
 
 /**
@@ -104,4 +110,5 @@ case class HackerNewsRetriever(uri: String) extends LinksExtractor {
       Link(attr.getValue, weight, element.text(), itemHref.getOrElse(""), itemText.getOrElse(""))
     }).toList.filter(_.weight>0.0).sortBy(-_.weight);
   }
+  override def toString = "HackerNews"+uri
 }

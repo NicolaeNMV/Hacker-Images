@@ -197,18 +197,27 @@ $( ->
   FEEDLOOPTIME = 8000; # 8s
   feedIt = (onFeeded) ->
     $('body').addClass('feedLoading')
-    $.getJSON NEWS_JSON_URI, (json) ->
-      pages = _.map(json, (link) ->
-        href: link.url
-        weight: link.weight
-        src: link.image
-        caption: link.title
-        feedbackLink: link.feedbackLink
-        feedbackText: link.feedbackText
-      )
-      engine.setPages(pages)
-      $('body').removeClass('feedLoading')
-      onFeeded and onFeeded()
+    $.ajax
+      type: 'GET'
+      url: NEWS_JSON_URI
+      success: (json) ->
+        pages = _.map(json, (link) ->
+          href: link.url
+          weight: link.weight
+          src: link.image
+          caption: link.title
+          feedbackLink: link.feedbackLink
+          feedbackText: link.feedbackText
+        )
+        engine.setPages(pages)
+        if(pages.length == 0)
+          $('body').addClass('errorLoading').removeClass('feedLoading')
+        else
+          $('body').removeClass('errorLoading').removeClass('feedLoading')
+        onFeeded and onFeeded()
+      error: ->
+        $('body').addClass('errorLoading')
+
   feedLoop = -> setTimeout((-> feedIt(feedLoop)), FEEDLOOPTIME)
   feedIt(feedLoop)
 )
