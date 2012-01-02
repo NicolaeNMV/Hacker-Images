@@ -87,6 +87,29 @@ header {
   }
 }
 
+#actions {
+  position: absolute;
+  right: 0;
+  padding: 5px 10px;
+  .toggler {
+    background: #fff;
+    color: #000;
+    padding: 1px 4px;
+    font-family: monospace;
+    text-decoration: none;
+    &.enabled {
+      background: #ccc;
+      &.blue {
+        background: #8df;
+      }
+      &.red {
+        background: #fc6;
+      }
+    }
+  }
+}
+
+
 body .errorLoading {
   display: none;
 }
@@ -191,11 +214,11 @@ div.errorLoading {
       text-decoration: none;
       .box-sizing(border-box);
     }
-    &:hover, &.expanded {
-      .feedback, .caption {
-        opacity: 1;
-      }
-    }
   }
 }
 
+#pages .page:hover, .pagesExpanded #pages {
+  .feedback, .caption {
+    opacity: 1;
+  }
+}

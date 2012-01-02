@@ -43,28 +43,40 @@ object Sources {
 
   val default = staticSources("hackernews")
 
-  def getSourceFromRequest(request: Request[_]): Option[NewsSource] =
-    request.queryString.get("source").flatMap(_.headOption).flatMap(_ match {
+  def getSourceFromRequest(source: Option[String], url: Option[String]): Option[NewsSource] =
+    source.flatMap(_ match {
       case "rss" =>
-        request.queryString.get("url").flatMap(_.headOption).map( url =>
+        url.map( url =>
           Some(NewsSource("rss", RssRetriever(url), ScreenshotExtractor))
         ).getOrElse(None)
       case source if(staticSources contains source) => 
         Some(staticSources(source))
+      case _ =>
+        None
     })
 }
 
 object Application extends Controller {
   
   def index = Action { (request) =>
-    val source = Sources.getSourceFromRequest(request).getOrElse(Sources.default)
-    Ok(views.html.index(source))
+    val source = request.queryString.get("source").flatMap(_.headOption)
+    val url = request.queryString.get("url").flatMap(_.headOption)
+    val sourceResult = Sources.getSourceFromRequest(source, url).getOrElse(Sources.default)
+    Ok(views.html.index(sourceResult))
+  }
+
+  def indexWithSource(source: String) = Action { (request) =>
+    val url = request.queryString.get("url").flatMap(_.headOption)
+    val sourceResult = Sources.getSourceFromRequest(Some(source), url).getOrElse(Sources.default)
+    Ok(views.html.index(sourceResult))
   }
 
   def get(format: String) = Action { (request) =>
-    val source = Sources.getSourceFromRequest(request).getOrElse(Sources.default)
+    val source = request.queryString.get("source").flatMap(_.headOption)
+    val url = request.queryString.get("url").flatMap(_.headOption)
+    val sourceResult = Sources.getSourceFromRequest(source, url).getOrElse(Sources.default)
     AsyncResult(
-      getResult(source).extend(promise => {
+      getResult(sourceResult).extend(promise => {
         promise.value match {
           case Redeemed(links) => format match {
             case "json" => Ok( toJson(links) )
@@ -89,7 +101,7 @@ object Application extends Controller {
   def getResult(source: NewsSource): Promise[List[LinkWithImage]] = {
     LinksFetcher.fetch(source.linksExtractor).flatMap(links => {
       Logger.debug(links.length+" links found.");
-      val images = links.map(link => 
+      val images = links.sortWith( _.weight > _.weight ).map(link => 
           ImageFetcher.fetch(link.url)(source.imageExtractor).map( (link, _) )
         ).sequence.map(_.flatMap(_ match {
         case (link, Some(img)) => Some(LinkWithImage(link, img))

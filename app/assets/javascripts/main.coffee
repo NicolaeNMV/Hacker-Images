@@ -1,6 +1,8 @@
 
 window['console'] = {log: $.noop, debug: $.noop, error: $.noop} if !window['console']
 
+Events = window.Events = `(function(_){return{pub:function(a,b,c,d){for(d=-1,c=[].concat(_[a]);c[++d];)c[d](b)},sub:function(a,b){(_[a]||(_[a]=[])).push(b)}}})({})`
+
 pageTmpl = _.template('<div class="page"><img src="<%= src %>" /><a class="feedback" target="_blank" href="<%= feedbackLink %>"><%= feedbackText %></a><a href="<%= href %>" target="_blank" class="caption"><%= caption %></a></div>')
 
 class Page
@@ -49,13 +51,6 @@ class Page
     @node.width(w).height(h)
     @
 
-  expand: ->
-    @node.addClass('expanded')
-    @
-  unexpand: ->
-    @node.removeClass('expanded')
-    @
-
 class Engine
   constructor: (@container, @unitDim = 100, @margin = 10) -> 
     @scales = [
@@ -69,8 +64,9 @@ class Engine
       [4,4]
     ]
     @pages = []
+    @weightsEnabled = true
     @
-  
+
   start: -> 
     @container.addClass('transitionStarted')
     @updateWidth()
@@ -83,6 +79,11 @@ class Engine
         lastWidth = @width
         @computeDistribution()
     )
+    @
+
+  setWeightsEnabled: (@weightsEnabled) -> 
+    @computeWeights()
+    @computeDistribution()
     @
 
   updateWidth: ->
@@ -98,7 +99,7 @@ class Engine
     weights = _(@pages).chain().map((b) -> b.weight)
     min = weights.min().value()
     max = weights.max().value()
-    if min is max
+    if (min is max) or (@weightsEnabled is false)
       [w, h] = @scales[Math.floor (n-1)/2]
       for img in @pages
         img.setGridSize(w, h).setSize(@unitDim*w-@margin, @unitDim*h-@margin)
@@ -141,15 +142,7 @@ class Engine
       obj.box.setPosition(@unitDim*obj.position[0], @unitDim*obj.position[1]).setFontSize((0.2+obj.box.w*0.6)+'em') 
     @
 
-  expandAll: ->
-    _.each(@pages, (p) -> p.expand())
-    @
-
-  unexpandAll: ->
-    _.each(@pages, (p) -> p.unexpand())
-    @
-
-  # Usage: setPages( [ { href: "http://greweb.fr/", weight: 0.15, img: "http://greweb.fr/image.png", caption: "my awesome blog" }, ... ] )
+# Usage: setPages( [ { href: "http://greweb.fr/", weight: 0.15, img: "http://greweb.fr/image.png", caption: "my awesome blog" }, ... ] )
   setPages: (pages) ->
     currentHref = _.map(@pages, (box) -> box.href)
     pagesHref = _.map(pages, (p) -> p.href)
@@ -187,12 +180,31 @@ class Engine
 $( ->
   engine = new Engine($('#pages')).start()
 
-  $(window).bind 'keyup keydown', (e) ->
-    if(e.metaKey || e.ctrlKey)
-      engine.expandAll()
-    else
-      engine.unexpandAll()
-  
+  body = $('body')
+
+  toggleAction = (action) ->
+    action.node.toggleClass('enabled')
+    body.toggleClass(action.bodyToggle)
+    Events.pub(action.bodyToggle, body.hasClass(action.bodyToggle))
+
+  actions = $('#actions .toggler').map () ->
+    self = $(this)
+    node: self, keyCode: self.attr('data-keyCode'), bodyToggle: self.attr('data-bodyToggle')
+
+  _(actions).each (action) ->
+    if action.node.hasClass('enabled')
+      body.addClass(action.bodyToggle)
+    action.node.bind 'click', -> toggleAction(action)
+
+  $(window).bind 'keydown', (e) ->
+    action = _(actions).find( (a) -> ""+e.keyCode == a.keyCode )
+    console.log action, e
+    action && toggleAction(action)
+
+
+  Events.sub('weightsEnabled', (enabled) ->
+    engine.setWeightsEnabled(enabled)
+  )
 
   FEEDLOOPTIME = 8000; # 8s
   feedIt = (onFeeded) ->

@@ -11,8 +11,10 @@ import models._
 object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
+    /*
     val linksFetchScheduler = actorOf[LinksFetchScheduler].start()
     Scheduler.schedule(linksFetchScheduler, "fetch", 1, 10, TimeUnit.SECONDS)
+    */
   }
 }
 

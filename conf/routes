@@ -2,9 +2,10 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# Home page
-GET     /                           controllers.Application.index()
 GET     /current.:format            controllers.Application.get(format)
+
+GET     /                           controllers.Application.index()
+GET     /:source                    controllers.Application.indexWithSource(source)
 
 
 # Map static resources from the /public folder to the /assets URL path

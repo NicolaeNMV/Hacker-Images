@@ -4,17 +4,26 @@
 <script type="text/javascript">
   NEWS_JSON_URI = "@Html(source.jsonURI)";
 </script>
-<header>
-  <hgroup>
-    <h1>@source.titleHtml</h1>
-    <h2>renew the way you preview news</h2>
-  </hgroup>
-</header>
+} {
+<body>
+  <div id="content">
+    <header>
+      <div id="actions">
+        <a class="toggler blue" data-keyCode="69" data-bodyToggle="pagesExpanded" href="#" title="Expand / Unexpand all">e</a>
+        <a class="toggler red enabled" data-keyCode="87" data-bodyToggle="weightsEnabled" href="#" title="Enable/Disable weights">w</a>
+      </div>
+      <hgroup>
+        <h1>@source.titleHtml</h1>
+        <h2>renew the way you preview news</h2>
+      </hgroup>
+    </header>
 
-<div id="pages"></div>
+    <div id="pages"></div>
 
-<div class="errorLoading">An error occured when loading links from @(source.linksExtractor).</div>
+    <div class="errorLoading">An error occured when loading links from @(source.linksExtractor).</div>
 
-<footer>News Exposé is a Play! Experiments, made by <a href="http://gaetanrenaudeau.fr" rel="author">Gaëtan Renaudeau</a> and <a href="http://github.com/adrenalinup" rel="author">Nicolae Namolovan</a>. see <a href="http://github.com/adrenalinup/Hacker-Images">source code</a></footer>
+    <footer>News Exposé is a Play! Experiments, made by <a href="http://gaetanrenaudeau.fr" rel="author">Gaëtan Renaudeau</a> and <a href="http://github.com/adrenalinup" rel="author">Nicolae Namolovan</a>. see <a href="http://github.com/adrenalinup/Hacker-Images">source code</a></footer>
+
+  </div>
+</body>
 }
-
