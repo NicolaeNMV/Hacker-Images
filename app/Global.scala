@@ -9,12 +9,14 @@ import controllers._
 import models._
 
 object Global extends GlobalSettings {
-
+  val linksFetchScheduler = actorOf[LinksFetchScheduler]
   override def onStart(app: Application) {
-    /*
-    val linksFetchScheduler = actorOf[LinksFetchScheduler].start()
+    linksFetchScheduler.start()
+    Scheduler.restart()
     Scheduler.schedule(linksFetchScheduler, "fetch", 1, 10, TimeUnit.SECONDS)
-    */
+  }
+  override def onStop(app: Application) {
+    linksFetchScheduler.stop()
   }
 }
 
